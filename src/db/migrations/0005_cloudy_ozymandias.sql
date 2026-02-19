@@ -1,0 +1,1 @@
+ALTER TABLE "scans" ADD COLUMN "competitor_analysis" json DEFAULT 'null'::json;
