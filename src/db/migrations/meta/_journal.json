@@ -43,6 +43,13 @@
       "when": 1771443254766,
       "tag": "0005_cloudy_ozymandias",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771594875458,
+      "tag": "0006_orange_guardsmen",
+      "breakpoints": true
     }
   ]
 }

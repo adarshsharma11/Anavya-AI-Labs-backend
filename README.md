@@ -108,10 +108,22 @@ bun run src/db/seed/pricing.seed.ts
 
 ---
 
+# 🌱 Seed Services Data
+
+Seeds AI services into database.
+
+Run:
+
+```bash
+bun run src/db/seed/services.seed.ts
+```
+
+---
+
 # ▶️ Start Server
 
 ```bash
-bun run src/server.ts
+bun run dev
 ```
 
 Server:
