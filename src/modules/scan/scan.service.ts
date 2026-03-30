@@ -75,6 +75,17 @@ export const getScanService = async (id: number) => {
   if (!scan) throw new Error("Scan not found");
 
   // =====================
+  // SYNC PREVIEW LOCK STATE
+  // =====================
+  if (scan.preview) {
+    scan.preview.locked = !scan.isUnlocked;
+  }
+
+  if (scan.competitorPreview) {
+    scan.competitorPreview.locked = !scan.isUnlocked;
+  }
+
+  // =====================
   // FREE RESPONSE
   // =====================
   if (!scan.isUnlocked) {
@@ -83,7 +94,7 @@ export const getScanService = async (id: number) => {
       url: scan.url,
       preview: scan.preview,
       competitorPreview: scan.competitorPreview,
-      competitorAnalysis: scan.competitorAnalysis, // 🔥 important
+      competitorAnalysis: scan.competitorAnalysis,
       locked: true,
     };
   }
