@@ -3,6 +3,9 @@ import { cors } from 'hono/cors'
 import pricingRoute from './api/v1/public/pricing.route'
 import scanRoute from './api/v1/public/scan.route'
 import servicesRoute from './api/v1/public/services.route'
+import paymentRoute from './api/v1/public/payment.route'
+
+
 
 const app = new Hono()
 
@@ -37,6 +40,8 @@ app.get('/api/test', (c) => {
 app.route(apiPrefix, pricingRoute)
 app.route(apiPrefix, scanRoute)
 app.route(apiPrefix, servicesRoute)
+app.route(apiPrefix, paymentRoute)
+
 
 
 export default app
