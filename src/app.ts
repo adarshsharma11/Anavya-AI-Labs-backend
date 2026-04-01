@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import pricingRoute from './api/v1/public/pricing.route'
 import scanRoute from './api/v1/public/scan.route'
 import servicesRoute from './api/v1/public/services.route'
+import blogsRoute from './api/v1/public/blogs.route'
 import paymentRoute from './api/v1/public/payment.route'
 
 
@@ -36,10 +37,11 @@ app.get('/api/test', (c) => {
   })
 })
 
-// pricing routes
+// routes
 app.route(apiPrefix, pricingRoute)
 app.route(apiPrefix, scanRoute)
 app.route(apiPrefix, servicesRoute)
+app.route(apiPrefix, blogsRoute)
 app.route(apiPrefix, paymentRoute)
 
 
