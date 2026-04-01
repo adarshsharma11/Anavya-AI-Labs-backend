@@ -102,5 +102,18 @@ export const getScanService = async (id: number) => {
   // =====================
   // PAID FULL REPORT
   // =====================
+  if (scan.isUnlocked && !scan.fullReport) {
+    return {
+      id: scan.id,
+      url: scan.url,
+      preview: scan.preview,
+      competitorPreview: scan.competitorPreview,
+      competitorAnalysis: scan.competitorAnalysis,
+      locked: false,
+      processing: true,
+      status: "processing",
+    };
+  }
+
   return scan;
 };
