@@ -5,6 +5,7 @@ import scanRoute from './api/v1/public/scan.route'
 import servicesRoute from './api/v1/public/services.route'
 import blogsRoute from './api/v1/public/blogs.route'
 import paymentRoute from './api/v1/public/payment.route'
+import pageRoute from './api/v1/public/page.route'
 
 
 
@@ -43,6 +44,7 @@ app.route(apiPrefix, scanRoute)
 app.route(apiPrefix, servicesRoute)
 app.route(apiPrefix, blogsRoute)
 app.route(apiPrefix, paymentRoute)
+app.route(apiPrefix, pageRoute)
 
 
 

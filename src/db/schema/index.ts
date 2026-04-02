@@ -4,3 +4,4 @@ export * from "./subscription";
 export * from "./scan";
 export * from "./services";
 export * from "./blogs";
+export * from "./pages";
