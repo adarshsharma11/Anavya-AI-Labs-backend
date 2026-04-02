@@ -1,12 +1,11 @@
 import {
   getServicesRepo,
-  getServicesPageRepo,
   createServiceRepo,
-  createPageRepo,
 } from "./services.repository";
+import { getPageBySlugService } from "../pages/pages.service";
 
 export const getServicesService = async () => {
-  const page = await getServicesPageRepo();
+  const page = await getPageBySlugService("service");
   const list = await getServicesRepo();
 
   return {
@@ -17,8 +16,4 @@ export const getServicesService = async () => {
 
 export const createServiceService = async (body:any) => {
   return await createServiceRepo(body);
-};
-
-export const createPageService = async (body:any)=>{
-  return await createPageRepo(body);
 };

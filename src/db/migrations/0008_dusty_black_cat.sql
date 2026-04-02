@@ -1,0 +1,1 @@
+DROP TABLE "services_page" CASCADE;

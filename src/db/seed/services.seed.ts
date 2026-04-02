@@ -1,10 +1,12 @@
 import { db } from "../db";
-import { services, servicesPage } from "../schema/services";
+import { services } from "../schema/services";
+import { pages } from "../schema/pages";
 
 const seed = async () => {
   console.log("🌱 Seeding services...");
 
-  await db.insert(servicesPage).values({
+  await db.insert(pages).values({
+    slug: "service",
     title: "AI Services",
     subtitle:
       "We offer a wide range of services to help you build and grow your digital product.",
