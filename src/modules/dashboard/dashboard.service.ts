@@ -1,7 +1,7 @@
 import { db } from "../../db/db";
 import { users } from "../../db/schema/user";
 import { scans } from "../../db/schema/scan";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export const getProfileService = async (userId: number) => {
   const user = await db.query.users.findFirst({
@@ -41,18 +41,29 @@ export const getUserScansService = async (userId: number) => {
 
 export const getUserAnalyticsService = async (userId: number) => {
   const userScans = await getUserScansService(userId);
-  const totalScans = userScans.length;
-  // Compute some basic mock or actual trends
-  // E.g., average performance score
-  let avgPerformance = 0;
-  if (totalScans > 0) {
-    const scores = userScans.map(s => s.preview?.categories?.performance || 0);
-    avgPerformance = scores.reduce((a, b) => a + Number(b), 0) / totalScans;
-  }
+  
+  const res = await db.execute(sql`
+    SELECT 
+      COALESCE(COUNT(*), 0) as "totalScans",
+      COALESCE(AVG((preview->'categories'->>'performance')::int), 0) as "avgPerformanceScore",
+      COALESCE(AVG((preview->'categories'->>'seo')::int), 0) as "avgSeoScore",
+      COALESCE(SUM((preview->>'totalIssuesFound')::int), 0) as "totalIssuesFound"
+    FROM scans
+    WHERE user_id = ${userId}
+  `);
+
+  const analytics = res.rows[0] || {
+    totalScans: 0,
+    avgPerformanceScore: 0,
+    avgSeoScore: 0,
+    totalIssuesFound: 0
+  };
 
   return {
-    totalScans,
-    averagePerformanceScore: Math.round(avgPerformance),
-    recentActivity: userScans.slice(0, 5) // Last 5
+    totalScans: Number(analytics.totalScans),
+    avgPerformanceScore: Math.round(Number(analytics.avgPerformanceScore)),
+    avgSeoScore: Math.round(Number(analytics.avgSeoScore)),
+    totalIssuesFound: Number(analytics.totalIssuesFound),
+    recentActivity: userScans.slice(0, 5)
   };
 };

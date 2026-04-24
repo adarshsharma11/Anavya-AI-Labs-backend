@@ -74,7 +74,7 @@ export const loginService = async (data: any) => {
   if (!isValid) throw new Error("Invalid credentials");
 
   // Tokens
-  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '15m' });
+  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
   
   // Refresh token
   const refreshTokenString = crypto.randomBytes(40).toString('hex');
@@ -106,7 +106,7 @@ export const refreshTokenService = async (token: string) => {
   const user = await authRepo.getUserById(rt.userId);
   if (!user) throw new Error("User associated with token not found");
 
-  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '15m' });
+  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
   
   // Roll refresh token for extra security
   const newRefreshToken = crypto.randomBytes(40).toString('hex');

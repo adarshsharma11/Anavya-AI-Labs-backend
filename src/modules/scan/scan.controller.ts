@@ -20,7 +20,8 @@ export const createScan = async (c: Context) => {
       }, 429);
     }
 
-    const scanId = await createScanService(url, ip, competitorUrl);
+    const user = c.get("user");
+    const scanId = await createScanService(url, ip, competitorUrl, user?.id);
 
     return c.json({
       success: true,
