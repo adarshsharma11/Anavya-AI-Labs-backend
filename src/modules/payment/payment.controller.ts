@@ -4,6 +4,65 @@ import { razorpay } from "../../lib/razorPay";
 import { getScanRepo, updateScanRepo } from "../scan/scan.repository";
 import { generateFullReport } from "../../lib/aiReport";
 
+const buildFailureReport = (message: string) => {
+  return {
+    executiveSummary: "Report generation failed",
+    technicalAnalysis: "",
+    seoImprovements: [],
+    performanceImprovements: [],
+    businessGrowthSuggestions: [],
+    estimatedTrafficImpact: "",
+    error: message,
+  };
+};
+
+const unlockScan = async (scanId: number) => {
+  const scan = await getScanRepo(scanId);
+  if (!scan) {
+    return { ok: false as const, reason: "Scan not found" };
+  }
+
+  if (!scan.isUnlocked) {
+    await updateScanRepo(scanId, {
+      isUnlocked: true,
+      status: scan.status === "completed" ? scan.status : "paid",
+    });
+  }
+
+  return { ok: true as const };
+};
+
+const unlockAndGenerateReport = async (scanId: number) => {
+  const scan = await getScanRepo(scanId);
+  if (!scan) {
+    return { ok: false as const, reason: "Scan not found" };
+  }
+
+  await unlockScan(scanId);
+
+  if (!scan.preview || scan.fullReport) {
+    return { ok: true as const };
+  }
+
+  await updateScanRepo(scanId, { status: "generating_full_report" });
+
+  try {
+    const fullReport = await generateFullReport(scan.url, scan.preview, {
+      url: scan.competitorUrl,
+      preview: scan.competitorPreview,
+      analysis: scan.competitorAnalysis,
+    });
+    await updateScanRepo(scanId, { fullReport, status: "completed" });
+    return { ok: true as const };
+  } catch (err: any) {
+    await updateScanRepo(scanId, {
+      fullReport: buildFailureReport(err?.message || "Unknown error"),
+      status: "completed",
+    });
+    return { ok: false as const, reason: err?.message || "Report generation failed" };
+  }
+};
+
 export const createOrder = async (c: Context) => {
   try {
     const body = await c.req.json();
@@ -18,7 +77,6 @@ export const createOrder = async (c: Context) => {
       receipt: `scan_${scanId}_${Date.now()}`,
       notes: { scanId },
     });
-    console.log(order, 'order');
 
     return c.json({ success: true, order });
   } catch (e: any) {
@@ -37,6 +95,13 @@ export const verifyPayment = async (c: Context) => {
       scanId,
     } = body;
 
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      return c.json(
+        { success: false, message: "RAZORPAY_KEY_SECRET is not set" },
+        500,
+      );
+    }
+
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
       .update(razorpay_order_id + "|" + razorpay_payment_id)
@@ -46,7 +111,18 @@ export const verifyPayment = async (c: Context) => {
       return c.json({ success: false, message: "Invalid signature" }, 400);
     }
 
-    return c.json({ success: true, message: "Payment verified" });
+    if (!scanId) {
+      return c.json({ success: true, message: "Payment verified" });
+    }
+
+    const numericScanId = Number(scanId);
+    const unlockResult = await unlockScan(numericScanId);
+    void unlockAndGenerateReport(numericScanId);
+    return c.json({
+      success: true,
+      message: "Payment verified",
+      unlocked: unlockResult.ok,
+    });
   } catch (e: any) {
     return c.json({ success: false, message: e.message }, 500);
   }
@@ -59,7 +135,6 @@ export const razorpayWebhook = async (c: any) => {
     const signature = c.req.header("x-razorpay-signature");
 
     if (!signature) {
-      console.error("Webhook error: missing signature");
       return ok();
     }
 
@@ -69,7 +144,6 @@ export const razorpayWebhook = async (c: any) => {
       .digest("hex");
 
     if (expectedSignature !== signature) {
-      console.error("Webhook error: invalid signature");
       return ok();
     }
 
@@ -80,39 +154,12 @@ export const razorpayWebhook = async (c: any) => {
       const scanId = event.payload.payment.entity.notes.scanId;
 
       if (scanId) {
-        const scan = await getScanRepo(Number(scanId));
-
-        if (!scan) {
-          console.error("Webhook error: scan not found", scanId);
-          return ok();
-        }
-
-        if (scan.isUnlocked) {
-          console.log("✅ Scan already unlocked, skipping:", scanId);
-          return ok();
-        }
-
-        if (scan.preview) {
-          try {
-            const fullReport = await generateFullReport(scan.url, scan.preview);
-            await updateScanRepo(Number(scanId), {
-              isUnlocked: true,
-              fullReport,
-              status: "completed",
-            });
-            console.log("✅ Full report generated and saved:", scanId);
-          } catch (err: any) {
-            console.error("Webhook error: report generation failed", err?.message);
-          }
-        } else {
-          console.error("Webhook error: preview missing, cannot generate", scanId);
-        }
+        await unlockAndGenerateReport(Number(scanId));
       }
     }
 
     return ok();
   } catch (err: any) {
-    console.error("Webhook error:", err.message);
     return c.json({ success: false }, 200);
   }
 };

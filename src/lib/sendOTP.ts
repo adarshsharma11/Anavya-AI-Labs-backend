@@ -20,10 +20,6 @@ export const sendOTP = async (email: string, otp: string, type: 'signup' | 'rese
   const isDev = process.env.NODE_ENV === "development" || !SMTP_USER;
 
   if (isDev) {
-    console.log(`\n========================================`);
-    console.log(`[MOCK EMAIL] To: ${email}`);
-    console.log(`[MOCK EMAIL] OTP (${type}): ${otp}`);
-    console.log(`========================================\n`);
     return true; // Mock success
   }
 
@@ -39,7 +35,6 @@ export const sendOTP = async (email: string, otp: string, type: 'signup' | 'rese
     });
     return true;
   } catch (err) {
-    console.error("Failed to send plain email OTP:", err);
     return false;
   }
 };

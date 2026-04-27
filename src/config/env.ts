@@ -3,18 +3,15 @@ import { resolve } from "node:path";
 import { config as loadDotEnv } from "dotenv";
 
 const nodeEnv = process.env.NODE_ENV;
-const envPath = resolve(
-  process.cwd(),
-  nodeEnv === "production" ? ".env" : ".env.development",
-);
+const envFilenames = nodeEnv === "production" ? [".env"] : [".env.development", ".env"];
 
-// if (existsSync(envPath)) {
-//   console.log(`Loading environment variables from ${envPath}`);
-//   loadDotEnv({ path: envPath });
-// } else if (nodeEnv !== "production") {
-//   console.log("Loading environment variables from .env");
-//   loadDotEnv();
-// }
+for (const filename of envFilenames) {
+  const envPath = resolve(process.cwd(), filename);
+  if (existsSync(envPath)) {
+    loadDotEnv({ path: envPath });
+    break;
+  }
+}
 
 export const env = {
   PORT: process.env.PORT || "3001",

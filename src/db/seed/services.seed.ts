@@ -3,8 +3,6 @@ import { services } from "../schema/services";
 import { pages } from "../schema/pages";
 
 const seed = async () => {
-  console.log("🌱 Seeding services...");
-
   await db.insert(pages).values({
     slug: "service",
     title: "AI Services",
@@ -29,7 +27,6 @@ const seed = async () => {
     },
   ]);
 
-  console.log("✅ Services seeded");
   process.exit(0);
 };
 

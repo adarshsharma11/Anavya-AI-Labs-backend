@@ -1,6 +1,19 @@
 import { createScanRepo, updateScanRepo, getScanRepo } from "./scan.repository";
 import { runWebsiteScan } from "../../lib/scanner";
 import { compareScans } from "../../lib/compareScan";
+import { generateFullReport } from "../../lib/aiReport";
+
+const buildFailureReport = (message: string) => {
+  return {
+    executiveSummary: "Report generation failed",
+    technicalAnalysis: "",
+    seoImprovements: [],
+    performanceImprovements: [],
+    businessGrowthSuggestions: [],
+    estimatedTrafficImpact: "",
+    error: message,
+  };
+};
 
 export const createScanService = async (
   url: string,
@@ -104,6 +117,25 @@ export const getScanService = async (id: number) => {
   // PAID FULL REPORT
   // =====================
   if (scan.isUnlocked && !scan.fullReport) {
+    if (scan.preview && scan.status !== "generating_full_report") {
+      void (async () => {
+        await updateScanRepo(scan.id, { status: "generating_full_report" });
+        try {
+          const fullReport = await generateFullReport(scan.url, scan.preview, {
+            url: scan.competitorUrl,
+            preview: scan.competitorPreview,
+            analysis: scan.competitorAnalysis,
+          });
+          await updateScanRepo(scan.id, { fullReport, status: "completed" });
+        } catch (err: any) {
+          await updateScanRepo(scan.id, {
+            fullReport: buildFailureReport(err?.message || "Unknown error"),
+            status: "completed",
+          });
+        }
+      })();
+    }
+
     return {
       id: scan.id,
       url: scan.url,
@@ -112,7 +144,7 @@ export const getScanService = async (id: number) => {
       competitorAnalysis: scan.competitorAnalysis,
       locked: false,
       processing: true,
-      status: "processing",
+      status: scan.status,
     };
   }
 

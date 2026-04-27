@@ -2,8 +2,6 @@ import { db } from "../db";
 import { plans, type InsertPlan } from "../schema/plan";
 
 async function seedPricing() {
-  console.log("🌱 Seeding pricing...");
-
   await db.delete(plans);
 
   const data: InsertPlan[] = [
@@ -70,8 +68,6 @@ async function seedPricing() {
   ];
 
   await db.insert(plans).values(data);
-
-  console.log("✅ Pricing seeded");
   process.exit(0);
 }
 
