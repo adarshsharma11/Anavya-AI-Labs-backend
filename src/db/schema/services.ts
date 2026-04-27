@@ -1,12 +1,5 @@
 import { pgTable, serial, text, json, timestamp } from "drizzle-orm/pg-core";
 
-export const servicesPage = pgTable("services_page", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  subtitle: text("subtitle").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
 

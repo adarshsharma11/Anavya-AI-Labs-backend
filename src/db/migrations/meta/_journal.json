@@ -57,6 +57,20 @@
       "when": 1775049660113,
       "tag": "0007_massive_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775132248576,
+      "tag": "0008_dusty_black_cat",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775132281007,
+      "tag": "0009_volatile_alice",
+      "breakpoints": true
     }
   ]
 }

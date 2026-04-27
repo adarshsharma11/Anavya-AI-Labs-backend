@@ -8,13 +8,13 @@ const envPath = resolve(
   nodeEnv === "production" ? ".env" : ".env.development",
 );
 
-if (existsSync(envPath)) {
-  console.log(`Loading environment variables from ${envPath}`);
-  loadDotEnv({ path: envPath });
-} else if (nodeEnv !== "production") {
-  console.log("Loading environment variables from .env");
-  loadDotEnv();
-}
+// if (existsSync(envPath)) {
+//   console.log(`Loading environment variables from ${envPath}`);
+//   loadDotEnv({ path: envPath });
+// } else if (nodeEnv !== "production") {
+//   console.log("Loading environment variables from .env");
+//   loadDotEnv();
+// }
 
 export const env = {
   PORT: process.env.PORT || "3001",
