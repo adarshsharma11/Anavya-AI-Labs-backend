@@ -5,7 +5,8 @@ import { compareScans } from "../../lib/compareScan";
 export const createScanService = async (
   url: string,
   ip: string,
-  competitorUrl?: string | null
+  competitorUrl?: string | null,
+  userId?: number | null
 ) => {
   // =====================
   // CREATE DB ENTRY
@@ -23,7 +24,7 @@ export const createScanService = async (
     fullReport: null,
 
     userEmail: null,
-    userId: null,
+    userId: userId || null,
     planId: null,
     isUnlocked: false,
   });

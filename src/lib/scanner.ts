@@ -252,7 +252,6 @@ export const runWebsiteScan = async (url: string) => {
       lockedIssues: totalIssuesFound,
       locked: true,
     };
-
   } catch (e) {
     return {
       overall: 52,
@@ -263,6 +262,22 @@ export const runWebsiteScan = async (url: string) => {
         seo: 50,
         accessibility: 50,
         security: 50,
+      },
+      metrics: {
+        loadTime: "0ms",
+        pageSize: "0KB",
+        images: 0,
+        scripts: 0,
+        links: 0,
+      },
+      social: {
+        ogTags: false,
+        ogImage: false,
+        twitterTags: false,
+      },
+      indexing: {
+        robots: false,
+        sitemap: false,
       },
       topIssues: [{ title: "Could not scan website", severity: "Low" }],
       quickWins: ["Try again later"],

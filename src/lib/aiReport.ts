@@ -1,23 +1,20 @@
 import OpenAI from "openai";
+import { z } from "zod";
+import { zodResponseFormat } from "openai/helpers/zod";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
 
-const safeParseJson = (input: string) => {
-  try {
-    return JSON.parse(input);
-  } catch {
-    const start = input.indexOf("{");
-    const end = input.lastIndexOf("}");
-    if (start === -1 || end === -1 || end <= start) return null;
-    try {
-      return JSON.parse(input.slice(start, end + 1));
-    } catch {
-      return null;
-    }
-  }
-};
+const ReportSchema = z.object({
+  executiveSummary: z.string(),
+  technicalAnalysis: z.string(),
+  seoImprovements: z.array(z.string()),
+  performanceImprovements: z.array(z.string()),
+  businessGrowthSuggestions: z.array(z.string()),
+  competitorStrategy: z.string().optional(),
+  estimatedTrafficImpact: z.string()
+});
 
 export const generateFullReport = async (url: string, preview: any) => {
   if (!process.env.OPENAI_API_KEY) {
@@ -26,52 +23,34 @@ export const generateFullReport = async (url: string, preview: any) => {
 
   const prompt = `
 You are a senior website auditor.
+Website URL: ${url}
+Preview scan data (JSON): ${JSON.stringify(preview)}
 
-Website URL:
-${url}
-
-Preview scan data (JSON):
-${JSON.stringify(preview)}
-
-Return ONLY valid JSON with this exact shape:
-{
-  "executiveSummary": "string",
-  "technicalAnalysis": "string",
-  "seoImprovements": ["string"],
-  "performanceImprovements": ["string"],
-  "businessGrowthSuggestions": ["string"],
-  "competitorStrategy": "string (optional)",
-  "estimatedTrafficImpact": "string"
-}
+Provide a highly structured actionable audit based on the metrics.
 `;
 
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content:
-          "You generate concise, structured website audit reports strictly as JSON.",
-      },
-      { role: "user", content: prompt },
-    ],
-    temperature: 0.3,
-    response_format: { type: "json_object" },
-  });
+  try {
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      response_format: zodResponseFormat(ReportSchema, "audit_report"),
+    });
 
-  const text = res?.choices?.[0]?.message?.content || "{}";
-  const parsed = safeParseJson(text);
-
-  if (!parsed) {
-    return {
-      executiveSummary: "Report generation failed",
-      technicalAnalysis: "",
-      seoImprovements: [],
-      performanceImprovements: [],
-      businessGrowthSuggestions: [],
-      estimatedTrafficImpact: "",
-    };
+    const text = res?.choices?.[0]?.message?.content;
+    if (text) {
+      return JSON.parse(text);
+    }
+  } catch (err: any) {
+    console.error("aiReport Error", err);
   }
 
-  return parsed;
+  return {
+    executiveSummary: "Report generation failed",
+    technicalAnalysis: "",
+    seoImprovements: [],
+    performanceImprovements: [],
+    businessGrowthSuggestions: [],
+    estimatedTrafficImpact: "",
+  };
 };

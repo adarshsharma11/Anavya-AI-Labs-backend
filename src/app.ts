@@ -6,6 +6,8 @@ import servicesRoute from './api/v1/public/services.route'
 import blogsRoute from './api/v1/public/blogs.route'
 import paymentRoute from './api/v1/public/payment.route'
 import pageRoute from './api/v1/public/page.route'
+import authRoute from './api/v1/public/auth.route'
+import dashboardRoute from './api/v1/dashboard.route'
 
 
 
@@ -45,6 +47,8 @@ app.route(apiPrefix, servicesRoute)
 app.route(apiPrefix, blogsRoute)
 app.route(apiPrefix, paymentRoute)
 app.route(apiPrefix, pageRoute)
+app.route(`${apiPrefix}/auth`, authRoute)
+app.route(`${apiPrefix}/dashboard`, dashboardRoute)
 
 
 
