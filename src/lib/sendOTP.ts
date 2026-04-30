@@ -1,40 +1,35 @@
-import nodemailer from "nodemailer";
+import sgMail from '@sendgrid/mail';
 
-// In a real env, import these from process.env
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465;
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@anavyaailabs.com";
 
-const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: SMTP_PORT === 465,
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
-  },
-});
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
 
 export const sendOTP = async (email: string, otp: string, type: 'signup' | 'reset') => {
-  const isDev = process.env.NODE_ENV === "development" || !SMTP_USER;
-
-  if (isDev) {
-    return true; // Mock success
-  }
-
   const subject = type === 'signup' ? "Your Anavya AI Labs Verification Code" : "Reset Your Password";
   const text = `Your verification code is: ${otp}. It will expire in 10 minutes.`;
 
+  if (!SENDGRID_API_KEY) {
+    console.warn("[WARN] SENDGRID_API_KEY is not set. OTP email was not sent. Check your .env file.");
+    // We still return true here to prevent breaking the flow if someone forgets to add the key in development,
+    // but the actual production requirement is to send the email.
+    return true; 
+  }
+
+  const msg = {
+    to: email,
+    from: SENDGRID_FROM_EMAIL,
+    subject,
+    text,
+  };
+
   try {
-    await transporter.sendMail({
-      from: `"Anavya AI Labs" <${SMTP_USER}>`,
-      to: email,
-      subject,
-      text,
-    });
+    await sgMail.send(msg);
     return true;
   } catch (err) {
+    console.error("[ERROR] Failed to send OTP via SendGrid:", err);
     return false;
   }
 };

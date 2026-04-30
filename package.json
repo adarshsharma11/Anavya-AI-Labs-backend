@@ -16,6 +16,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "@sparticuz/chromium": "^147.0.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^8.0.0",
