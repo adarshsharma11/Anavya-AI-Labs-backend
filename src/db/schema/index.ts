@@ -6,3 +6,4 @@ export * from "./scan";
 export * from "./services";
 export * from "./blogs";
 export * from "./pages";
+export * from "./settings";
