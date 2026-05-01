@@ -8,6 +8,7 @@ import paymentRoute from './api/v1/public/payment.route'
 import pageRoute from './api/v1/public/page.route'
 import authRoute from './api/v1/public/auth.route'
 import dashboardRoute from './api/v1/dashboard.route'
+import settingsRoute from './api/v1/public/settings.route'
 
 
 
@@ -49,6 +50,7 @@ app.route(apiPrefix, paymentRoute)
 app.route(apiPrefix, pageRoute)
 app.route(`${apiPrefix}/auth`, authRoute)
 app.route(`${apiPrefix}/dashboard`, dashboardRoute)
+app.route(`${apiPrefix}/settings`, settingsRoute)
 
 
 
