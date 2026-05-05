@@ -12,6 +12,8 @@ import settingsRoute from './api/v1/public/settings.route'
 
 
 
+import { env } from './config/env'
+
 const app = new Hono()
 
 const apiPrefix = '/api/v1'
@@ -19,7 +21,7 @@ const apiPrefix = '/api/v1'
 // CORS middleware
 app.use(
   cors({
-    origin: '*',
+    origin: env.NODE_ENV === 'production' ? [env.FRONTEND_URL] : '*',
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
   })

@@ -33,3 +33,34 @@ export const sendOTP = async (email: string, otp: string, type: 'signup' | 'rese
     return false;
   }
 };
+
+export const sendReportReadyEmail = async (email: string, scanId: number, url: string) => {
+  const subject = "Your AI Website Audit Report is Ready!";
+  const reportUrl = `${process.env.FRONTEND_URL || 'https://anavyaailabs.com'}/scanner?id=${scanId}`;
+  
+  const text = `Great news! Your AI-generated deep audit report for ${url} is now ready to view.
+  
+Access your full report here: ${reportUrl}
+
+Thank you for choosing Anavya AI Labs.`;
+
+  if (!SENDGRID_API_KEY) {
+    console.warn("[WARN] SENDGRID_API_KEY is not set. Report email not sent.");
+    return true; 
+  }
+
+  const msg = {
+    to: email,
+    from: SENDGRID_FROM_EMAIL,
+    subject,
+    text,
+  };
+
+  try {
+    await sgMail.send(msg);
+    return true;
+  } catch (err) {
+    console.error("[ERROR] Failed to send report ready email:", err);
+    return false;
+  }
+};

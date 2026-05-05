@@ -2,18 +2,10 @@ import { createScanRepo, updateScanRepo, getScanRepo } from "./scan.repository";
 import { runWebsiteScan } from "../../lib/scanner";
 import { compareScans } from "../../lib/compareScan";
 import { generateFullReport } from "../../lib/aiReport";
+import { sendReportReadyEmail } from "../../lib/sendOTP";
+import { getUserById } from "../auth/auth.repository";
 
-const buildFailureReport = (message: string) => {
-  return {
-    executiveSummary: "Report generation failed",
-    technicalAnalysis: "",
-    seoImprovements: [],
-    performanceImprovements: [],
-    businessGrowthSuggestions: [],
-    estimatedTrafficImpact: "",
-    error: message,
-  };
-};
+import { logError } from "../../lib/errorLog";
 
 export const createScanService = async (
   url: string,
@@ -42,7 +34,10 @@ export const createScanService = async (
     isUnlocked: false,
   });
 
-  if (!scan) throw new Error("Scan creation failed");
+  if (!scan) {
+    logError("CREATE_SCAN", new Error("Scan creation failed"), { url, ip });
+    throw new Error("Scan creation failed");
+  }
 
   // =====================
   // MAIN SITE SCAN
@@ -57,7 +52,8 @@ export const createScanService = async (
   if (competitorUrl) {
     try {
       competitorPreview = await runWebsiteScan(competitorUrl);
-    } catch {
+    } catch (err) {
+      logError("COMPETITOR_SCAN", err, { competitorUrl });
       competitorPreview = null;
     }
   }
@@ -127,11 +123,20 @@ export const getScanService = async (id: number) => {
             analysis: scan.competitorAnalysis,
           });
           await updateScanRepo(scan.id, { fullReport, status: "completed" });
+
+          // Send email notification
+          let targetEmail = scan.userEmail;
+          if (!targetEmail && scan.userId) {
+            const user = await getUserById(scan.userId);
+            if (user) targetEmail = user.email;
+          }
+
+          if (targetEmail) {
+            await sendReportReadyEmail(targetEmail, scan.id, scan.url);
+          }
         } catch (err: any) {
-          await updateScanRepo(scan.id, {
-            fullReport: buildFailureReport(err?.message || "Unknown error"),
-            status: "completed",
-          });
+          logError("AI_REPORT_GENERATION_SERVICE", err, { scanId: scan.id });
+          await updateScanRepo(scan.id, { status: "completed" });
         }
       })();
     }
