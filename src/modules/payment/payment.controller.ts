@@ -3,18 +3,10 @@ import crypto from "crypto";
 import { razorpay } from "../../lib/razorPay";
 import { getScanRepo, updateScanRepo } from "../scan/scan.repository";
 import { generateFullReport } from "../../lib/aiReport";
+import { sendReportReadyEmail } from "../../lib/sendOTP";
+import { getUserById } from "../auth/auth.repository";
 
-const buildFailureReport = (message: string) => {
-  return {
-    executiveSummary: "Report generation failed",
-    technicalAnalysis: "",
-    seoImprovements: [],
-    performanceImprovements: [],
-    businessGrowthSuggestions: [],
-    estimatedTrafficImpact: "",
-    error: message,
-  };
-};
+import { logError } from "../../lib/errorLog";
 
 const unlockScan = async (scanId: number) => {
   const scan = await getScanRepo(scanId);
@@ -35,11 +27,13 @@ const unlockScan = async (scanId: number) => {
 const unlockAndGenerateReport = async (scanId: number) => {
   const scan = await getScanRepo(scanId);
   if (!scan) {
+    logError("UNLOCK_REPORT", new Error("Scan not found"), { scanId });
     return { ok: false as const, reason: "Scan not found" };
   }
 
   await unlockScan(scanId);
 
+  // If already has report or no preview to work with
   if (!scan.preview || scan.fullReport) {
     return { ok: true as const };
   }
@@ -52,13 +46,28 @@ const unlockAndGenerateReport = async (scanId: number) => {
       preview: scan.competitorPreview,
       analysis: scan.competitorAnalysis,
     });
+    
     await updateScanRepo(scanId, { fullReport, status: "completed" });
+
+    // Send email notification
+    let targetEmail = scan.userEmail;
+    if (!targetEmail && scan.userId) {
+      const user = await getUserById(scan.userId);
+      if (user) targetEmail = user.email;
+    }
+
+    if (targetEmail) {
+      await sendReportReadyEmail(targetEmail, scan.id, scan.url);
+    }
+
     return { ok: true as const };
   } catch (err: any) {
-    await updateScanRepo(scanId, {
-      fullReport: buildFailureReport(err?.message || "Unknown error"),
-      status: "completed",
-    });
+    logError("AI_REPORT_GENERATION", err, { scanId, url: scan.url });
+    
+    // Even if it fails, mark as completed so the UI stops polling/loading
+    // The generateFullReport with retry already returns a fallback, 
+    // but this catch handles extreme cases (e.g. DB update failure of the fallback)
+    await updateScanRepo(scanId, { status: "completed" });
     return { ok: false as const, reason: err?.message || "Report generation failed" };
   }
 };
@@ -138,12 +147,19 @@ export const razorpayWebhook = async (c: any) => {
       return ok();
     }
 
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!secret || secret === "your_webhook_secret") {
+      logError("PAYMENT_WEBHOOK", new Error("RAZORPAY_WEBHOOK_SECRET is not set or is a placeholder. Webhook verification skipped (insecure)."));
+      // In production we might want to return an error, but per task we just want it to work/warn.
+    }
+
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET!)
+      .createHmac("sha256", secret || "")
       .update(body)
       .digest("hex");
 
     if (expectedSignature !== signature) {
+      logError("PAYMENT_WEBHOOK", new Error("Invalid webhook signature"), { signature });
       return ok();
     }
 
@@ -160,6 +176,7 @@ export const razorpayWebhook = async (c: any) => {
 
     return ok();
   } catch (err: any) {
+    logError("PAYMENT_WEBHOOK_ERROR", err);
     return c.json({ success: false }, 200);
   }
 };

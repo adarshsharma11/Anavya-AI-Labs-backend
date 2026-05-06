@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { createScanService, getScanService } from "./scan.service";
-import { checkRateLimit } from "../../lib/rateLimiter";
+import { checkRateLimit, checkDailyScanLimit } from "../../lib/rateLimiter";
 
 export const createScan = async (c: Context) => {
   try {
@@ -13,10 +13,19 @@ export const createScan = async (c: Context) => {
       c.req.header("x-forwarded-for") ||
       "local";
 
+    // 10 per minute (existing)
     if (!checkRateLimit(ip)) {
       return c.json({
         success: false,
-        message: "Too many scans. Try later",
+        message: "Too many requests. Please wait a minute.",
+      }, 429);
+    }
+
+    // 5 per day (new)
+    if (!checkDailyScanLimit(ip)) {
+      return c.json({
+        success: false,
+        message: "Rate limit: 5 scans per day",
       }, 429);
     }
 

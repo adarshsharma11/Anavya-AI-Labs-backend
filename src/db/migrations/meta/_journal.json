@@ -78,6 +78,13 @@
       "when": 1777285432183,
       "tag": "0010_tricky_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777635857392,
+      "tag": "0011_lucky_chamber",
+      "breakpoints": true
     }
   ]
 }

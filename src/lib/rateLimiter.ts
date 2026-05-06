@@ -33,3 +33,19 @@ export const checkAiRateLimit = (ipOrUserId: string) => {
   rec.count++;
   return true;
 };
+
+const dailyScanMap = new Map<string, { count: number; resetAt: number }>();
+
+export const checkDailyScanLimit = (ip: string, maxScans = 5) => {
+  const now = Date.now();
+  const rec = dailyScanMap.get(ip);
+  
+  if (!rec || now > rec.resetAt) {
+    dailyScanMap.set(ip, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
+    return true;
+  }
+  
+  if (rec.count >= maxScans) return false;
+  rec.count++;
+  return true;
+};

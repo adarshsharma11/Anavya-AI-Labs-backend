@@ -60,7 +60,24 @@ const ReportSchema = z.object({
   estimatedTrafficImpact: z.string(),
 });
 
-export const generateFullReport = async (
+import { logError } from "./errorLog";
+
+export function buildDegradedReport(reason: string): any {
+  return {
+    executiveSummary: `We encountered a temporary technical issue while generating your detailed AI report (${reason}). Our technical team has been notified. You still have access to all technical metrics and category scores below.`,
+    technicalAnalysis: "Analysis partially unavailable due to AI service timeout or rate limit. Please check the 'Technical Metrics' card for raw data.",
+    seoImprovements: ["Review your meta titles and descriptions for consistency.", "Ensure all images have descriptive ALT text.", "Verify your robots.txt and sitemap.xml are correctly linked."],
+    performanceImprovements: ["Optimize large images to reduce page weight.", "Enable browser caching for static assets.", "Minimize the number of third-party scripts."],
+    businessGrowthSuggestions: ["Optimize your primary call-to-action (CTA) for better conversions.", "Add trust signals like testimonials or partner logos.", "Ensure your value proposition is clear above the fold."],
+    competitorStrategy: "Competitor deep-dive strategy currently unavailable. Please check back later or contact support if this persists.",
+    estimatedTrafficImpact: "Potential for 15-30% traffic growth with standard optimizations.",
+    error: reason
+  };
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const generateFullReportWithRetry = async (
   url: string,
   preview: any,
   competitor?: {
@@ -70,7 +87,8 @@ export const generateFullReport = async (
   } | null,
 ) => {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set");
+    logError("AI_REPORT", new Error("OPENAI_API_KEY is not set"));
+    return buildDegradedReport("API Key Missing");
   }
 
   const openai = new OpenAI({
@@ -79,32 +97,40 @@ export const generateFullReport = async (
 
   const prompt = AI_AUDIT_REPORT_PROMPT({ url, preview, competitor: competitor ?? null });
 
-  try {
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      response_format: zodResponseFormat(ReportSchema, "audit_report"),
-    });
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      // 30-second timeout using AbortController (OpenAI SDK supports it)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    const text = res?.choices?.[0]?.message?.content;
-    if (text) {
-      try {
-        const parsed = JSON.parse(text);
-        return parsed;
-      } catch (err: any) {
+      const res = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        response_format: zodResponseFormat(ReportSchema, "audit_report"),
+      }, { signal: controller.signal });
+
+      clearTimeout(timeoutId);
+
+      const text = res?.choices?.[0]?.message?.content;
+      if (text) {
+        try {
+          return JSON.parse(text);
+        } catch (err: any) {
+          logError("AI_REPORT_PARSE", err, { attempt, text });
+          lastError = err;
+        }
       }
+    } catch (err: any) {
+      logError(`AI_REPORT_ATTEMPT_${attempt}`, err, { url, attempt });
+      lastError = err;
+      if (attempt === 1) await sleep(2000); // Wait 2s before retry
     }
-  } catch (err: any) {
   }
 
-  return {
-    executiveSummary: "Report generation failed",
-    technicalAnalysis: "",
-    seoImprovements: [],
-    performanceImprovements: [],
-    businessGrowthSuggestions: [],
-    competitorStrategy: null,
-    estimatedTrafficImpact: "",
-  };
+  return buildDegradedReport(lastError?.message || "AI Service Unavailable");
 };
+
+// Keep original name for compatibility if needed, or update all callers
+export const generateFullReport = generateFullReportWithRetry;

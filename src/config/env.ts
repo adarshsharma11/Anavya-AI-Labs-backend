@@ -20,4 +20,6 @@ export const env = {
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+  FRONTEND_URL: process.env.FRONTEND_URL || "https://anavyaailabs.com",
+  NODE_ENV: process.env.NODE_ENV || "development",
 };
