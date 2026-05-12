@@ -18,15 +18,7 @@ export const signup = async (c: Context) => {
   }
 };
 
-export const verifyOtp = async (c: Context) => {
-  const body = await c.req.json();
-  try {
-    const res = await authService.verifyOtpService(body);
-    return c.json(res);
-  } catch (err: any) {
-    return c.json({ success: false, message: err.message }, 400);
-  }
-};
+
 
 export const login = async (c: Context) => {
   const body = await c.req.json();

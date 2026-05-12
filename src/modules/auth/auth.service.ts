@@ -18,48 +18,27 @@ const verifyPassword = async (password: string, hash: string) => {
 
 export const signupService = async (data: any) => {
   const { email, password, name, username, phoneNumber } = data;
-  if (!email || !password) throw new Error("Email and password required");
+  if (!email || !password || !name) throw new Error("Name, email, and password required");
 
   // check if exists
   const existing = await authRepo.getUserByEmail(email);
   if (existing) throw new Error("Email already registered");
 
-  // logic: we won't create user fully active until verified.
-  // Actually, we can create user and leave emailVerifiedAt as null.
   const hashedPassword = await hashPassword(password);
   await authRepo.createUserRepo({
     email,
     password: hashedPassword,
     name,
-    username,
-    phoneNumber,
+    username: username || null,
+    phoneNumber: phoneNumber || null,
     authProvider: "local",
+    emailVerifiedAt: new Date(),
   });
 
-  const otpCode = generateOTP();
-  // Expires in 10 mins
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-  await authRepo.createOtpRepo({ email, otp: otpCode, type: "signup", expiresAt });
-  await sendOTP(email, otpCode, "signup");
-
-  return { success: true, message: "OTP sent successfully. Please verify your email." };
+  return { success: true, message: "Account created successfully. You can now login." };
 };
 
-export const verifyOtpService = async (data: any) => {
-  const { email, otp } = data;
-  if (!email || !otp) throw new Error("Email and OTP required");
 
-  const validOtp = await authRepo.getValidOtp(email, otp, "signup");
-  if (!validOtp) throw new Error("Invalid or expired OTP");
-
-  const user = await authRepo.getUserByEmail(email);
-  if (!user) throw new Error("User not found");
-
-  await authRepo.updateUserRepo(user.id, { emailVerifiedAt: new Date() });
-  await authRepo.deleteOtp(validOtp.id);
-
-  return { success: true, message: "Email verified successfully. You can now login." };
-};
 
 export const loginService = async (data: any) => {
   const { email, password } = data;
@@ -68,14 +47,12 @@ export const loginService = async (data: any) => {
   const user = await authRepo.getUserByEmail(email);
   if (!user || !user.password) throw new Error("Invalid credentials");
 
-  if (!user.emailVerifiedAt) throw new Error("Please verify your email first");
-
   const isValid = await verifyPassword(password, user.password);
   if (!isValid) throw new Error("Invalid credentials");
 
   // Tokens
   const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-  
+
   // Refresh token
   const refreshTokenString = crypto.randomBytes(40).toString('hex');
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -107,11 +84,11 @@ export const refreshTokenService = async (token: string) => {
   if (!user) throw new Error("User associated with token not found");
 
   const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-  
+
   // Roll refresh token for extra security
   const newRefreshToken = crypto.randomBytes(40).toString('hex');
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  
+
   await authRepo.deleteRefreshToken(token);
   await authRepo.createRefreshToken({
     token: newRefreshToken,
@@ -149,7 +126,7 @@ export const resetPasswordService = async (data: any) => {
   if (!user) throw new Error("User not found");
 
   const hashedPassword = await hashPassword(newPassword);
-  
+
   await authRepo.updateUserRepo(user.id, { password: hashedPassword });
   await authRepo.deleteOtp(validOtp.id);
 

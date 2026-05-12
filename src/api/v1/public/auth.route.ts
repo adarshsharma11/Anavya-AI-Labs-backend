@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { signup, verifyOtp, login, refresh, forgotPassword, resetPassword } from '../../../modules/auth/auth.controller';
+import { signup, login, refresh, forgotPassword, resetPassword } from '../../../modules/auth/auth.controller';
 
 const authRoute = new Hono();
 
 authRoute.post('/signup', signup);
-authRoute.post('/verify-otp', verifyOtp);
+
 authRoute.post('/login', login);
 authRoute.post('/refresh', refresh);
 authRoute.post('/forgot-password', forgotPassword);
