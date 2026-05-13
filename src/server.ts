@@ -17,7 +17,11 @@ if (process.env.NODE_ENV === "production") {
   scheduleBlogGeneration();
 }
 
+import { env } from './config/env'
+
+const port = Number(env.PORT) || 3001;
+
 export default {
-  port: 3001,
+  port,
   fetch: app.fetch,
 }
