@@ -52,7 +52,7 @@ app.route(apiPrefix, paymentRoute)
 app.route(apiPrefix, pageRoute)
 app.route(`${apiPrefix}/auth`, authRoute)
 app.route(`${apiPrefix}/dashboard`, dashboardRoute)
-app.route(`${apiPrefix}/settings`, settingsRoute)
+app.route(apiPrefix, settingsRoute)
 
 
 

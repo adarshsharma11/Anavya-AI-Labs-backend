@@ -15,24 +15,37 @@ export async function seedServices() {
       subtitle:
         "We offer a wide range of services to help you build and grow your digital product.",
     });
+
+    console.log("✓ Service page seeded");
+  } else {
+    console.log("✓ Service page already exists. Skipping.");
   }
 
+  // ===== SERVICES CHECK =====
   const existingServices = await db.query.services.findMany();
 
-  if (existingServices.length > 0) {
-    console.log("Services already exist. Skipping.");
-    return;
+  if (existingServices.length === 0) {
+    await db.insert(services).values([
+      {
+        slug: "ai-chatbot-development",
+        title: "AI Chatbot Development",
+        description: "We build intelligent AI chatbots...",
+        icon: "Bot",
+        cta: { label: "Get a quote", href: "/pricing" },
+      },
+      {
+        slug: "custom-ai-solutions",
+        title: "Custom AI Solutions",
+        description: "Leverage machine learning...",
+        icon: "BrainCircuit",
+        cta: { label: "Talk to us", href: "/about" },
+      },
+    ]);
+
+    console.log("✓ Services seeded");
+  } else {
+    console.log("✓ Services already exist. Skipping.");
   }
+};
 
-  await db.insert(services).values([
-    {
-      slug: "ai-chatbot-development",
-      title: "AI Chatbot Development",
-      description: "We build intelligent AI chatbots...",
-      icon: "Bot",
-      cta: { label: "Get a quote", href: "/pricing" },
-    },
-  ]);
-
-  console.log("✓ Services seeded");
-}
+export default seedServices;
