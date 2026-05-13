@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun run src/server.ts",
-    "start": "NODE_ENV=production bun run src/server.ts"
+    "start": "NODE_ENV=production bun run src/server.ts",
+    "seed": "bun run src/db/seed/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
