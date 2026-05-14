@@ -9,6 +9,7 @@ import pageRoute from './api/v1/public/page.route'
 import authRoute from './api/v1/public/auth.route'
 import dashboardRoute from './api/v1/dashboard.route'
 import settingsRoute from './api/v1/public/settings.route'
+import contactRoute from './api/v1/public/contact.route'
 
 
 
@@ -53,6 +54,7 @@ app.route(apiPrefix, pageRoute)
 app.route(`${apiPrefix}/auth`, authRoute)
 app.route(`${apiPrefix}/dashboard`, dashboardRoute)
 app.route(apiPrefix, settingsRoute)
+app.route(apiPrefix, contactRoute)
 
 
 

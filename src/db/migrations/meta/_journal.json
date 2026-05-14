@@ -85,6 +85,13 @@
       "when": 1777635857392,
       "tag": "0011_lucky_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1778739142084,
+      "tag": "0012_outgoing_calypso",
+      "breakpoints": true
     }
   ]
 }
