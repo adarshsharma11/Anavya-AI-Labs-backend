@@ -22,4 +22,5 @@ export const env = {
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || "",
   FRONTEND_URL: process.env.FRONTEND_URL || "https://anavyaailabs.com",
   NODE_ENV: process.env.NODE_ENV || "development",
+  ADMIN_API_KEY: process.env.ADMIN_API_KEY || "super_secret_admin_key_123",
 };
