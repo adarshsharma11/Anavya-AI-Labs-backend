@@ -3,6 +3,7 @@ import "dotenv/config";
 import { seedBlogs } from "./blogs.seed";
 import { seedPricing } from "./pricing.seed";
 import { seedServices } from "./services.seed";
+import { seedPortfolio } from "./portfolio.seed";
 
 async function runSeeds() {
   try {
@@ -11,6 +12,7 @@ async function runSeeds() {
     await seedBlogs();
     await seedPricing();
     await seedServices();
+    await seedPortfolio();
 
     console.log("All seeds completed");
   } catch (error) {

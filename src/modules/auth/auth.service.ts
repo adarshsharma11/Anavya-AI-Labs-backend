@@ -110,9 +110,20 @@ export const forgotPasswordService = async (email: string) => {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   await authRepo.createOtpRepo({ email, otp: otpCode, type: "reset_password", expiresAt });
-  await sendOTP(email, otpCode, "reset");
-
-  return { success: true, message: "Password reset OTP sent to your email." };
+  
+  const devMode = !process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === "your_sendgrid_api_key_here";
+  
+  if (!devMode) {
+    try {
+      await sendOTP(email, otpCode, "reset");
+    } catch (e) {
+      console.warn("Failed to send OTP via SendGrid", e);
+      return { success: true, message: "Failed to send email, but OTP generated.", mockEmailDelivery: true, otp: otpCode };
+    }
+    return { success: true, message: "Password reset OTP sent to your email." };
+  } else {
+    return { success: true, message: "Password reset OTP generated.", mockEmailDelivery: true, otp: otpCode };
+  }
 };
 
 export const resetPasswordService = async (data: any) => {

@@ -10,6 +10,7 @@ import authRoute from './api/v1/public/auth.route'
 import dashboardRoute from './api/v1/dashboard.route'
 import settingsRoute from './api/v1/public/settings.route'
 import contactRoute from './api/v1/public/contact.route'
+import portfolioRoute from './api/v1/public/portfolio.route'
 
 
 
@@ -22,9 +23,16 @@ const apiPrefix = '/api/v1'
 // CORS middleware
 app.use(
   cors({
-    origin: env.NODE_ENV === 'production' ? [env.FRONTEND_URL] : '*',
+    origin: (origin) => {
+      if (env.NODE_ENV !== 'production') return '*';
+      if (!origin) return env.FRONTEND_URL;
+      if (origin === env.FRONTEND_URL || origin.startsWith('http://localhost:')) {
+        return origin;
+      }
+      return env.FRONTEND_URL;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
+    allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
   })
 )
 
@@ -55,6 +63,7 @@ app.route(`${apiPrefix}/auth`, authRoute)
 app.route(`${apiPrefix}/dashboard`, dashboardRoute)
 app.route(apiPrefix, settingsRoute)
 app.route(apiPrefix, contactRoute)
+app.route(apiPrefix, portfolioRoute)
 
 
 
