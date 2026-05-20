@@ -9,4 +9,5 @@ export * from "./pages";
 export * from "./settings";
 export * from "./contact";
 export * from "./portfolio";
+export * from "./about";
 

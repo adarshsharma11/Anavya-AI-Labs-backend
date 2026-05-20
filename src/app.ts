@@ -11,6 +11,7 @@ import dashboardRoute from './api/v1/dashboard.route'
 import settingsRoute from './api/v1/public/settings.route'
 import contactRoute from './api/v1/public/contact.route'
 import portfolioRoute from './api/v1/public/portfolio.route'
+import aboutRoute from './api/v1/public/about.route'
 
 
 
@@ -64,6 +65,7 @@ app.route(`${apiPrefix}/dashboard`, dashboardRoute)
 app.route(apiPrefix, settingsRoute)
 app.route(apiPrefix, contactRoute)
 app.route(apiPrefix, portfolioRoute)
+app.route(apiPrefix, aboutRoute)
 
 
 
