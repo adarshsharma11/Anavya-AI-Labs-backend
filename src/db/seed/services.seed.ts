@@ -31,7 +31,7 @@ export async function seedServices() {
         title: "AI Chatbot Development",
         description: "We build intelligent AI chatbots...",
         icon: "Bot",
-        cta: { label: "Get a quote", href: "/pricing" },
+        cta: { label: "Get a quote", href: "/scanner" },
       },
       {
         slug: "custom-ai-solutions",

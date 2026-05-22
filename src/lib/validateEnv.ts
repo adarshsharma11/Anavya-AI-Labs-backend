@@ -12,10 +12,11 @@ export function validateProductionEnv(): { valid: boolean; errors: string[] } {
   const criticalKeys = [
     "RAZORPAY_KEY_ID",
     "RAZORPAY_KEY_SECRET",
+    "RAZORPAY_WEBHOOK_SECRET",
     "OPENAI_API_KEY",
     "DATABASE_URL",
     "JWT_SECRET",
-    "JWT_REFRESH_SECRET"
+    "JWT_REFRESH_SECRET",
   ];
 
   const errors: string[] = [];
