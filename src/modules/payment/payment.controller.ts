@@ -8,13 +8,10 @@ import { getUserById } from "../auth/auth.repository";
 
 import { logError } from "../../lib/errorLog";
 import { env } from "../../config/env";
-
-/** Razorpay order currency — must be INR (amount is in paise). */
-const RAZORPAY_CURRENCY = "INR" as const;
-
-function amountToPaise(rupees: number): number {
-  return Math.round(rupees * 100);
-}
+import {
+  getPaymentQuote,
+  type PaymentRegion,
+} from "../../lib/paymentConfig";
 
 const WEBHOOK_SECRET_PLACEHOLDERS = new Set([
   "",
@@ -30,6 +27,21 @@ function secureCompare(expected: string, actual: string): boolean {
     Buffer.from(expected, "utf8"),
     Buffer.from(actual, "utf8"),
   );
+}
+
+function resolveRegion(
+  value: unknown,
+  c: Context,
+): PaymentRegion {
+  if (value === "IN" || value === "INTL") return value;
+
+  const header = c.req.header("x-client-region");
+  if (header === "IN" || header === "INTL") return header;
+
+  const cfCountry = c.req.header("cf-ipcountry");
+  if (cfCountry === "IN") return "IN";
+
+  return "INTL";
 }
 
 const unlockScan = async (scanId: number) => {
@@ -57,7 +69,6 @@ const unlockAndGenerateReport = async (scanId: number) => {
 
   await unlockScan(scanId);
 
-  // If already has report or no preview to work with
   if (!scan.preview || scan.fullReport) {
     return { ok: true as const };
   }
@@ -73,7 +84,6 @@ const unlockAndGenerateReport = async (scanId: number) => {
 
     await updateScanRepo(scanId, { fullReport, status: "completed" });
 
-    // Send email notification
     let targetEmail = scan.userEmail;
     if (!targetEmail && scan.userId) {
       const user = await getUserById(scan.userId);
@@ -87,58 +97,51 @@ const unlockAndGenerateReport = async (scanId: number) => {
     return { ok: true as const };
   } catch (err: any) {
     logError("AI_REPORT_GENERATION", err, { scanId, url: scan.url });
-
-    // Even if it fails, mark as completed so the UI stops polling/loading
-    // The generateFullReport with retry already returns a fallback, 
-    // but this catch handles extreme cases (e.g. DB update failure of the fallback)
     await updateScanRepo(scanId, { status: "completed" });
     return { ok: false as const, reason: err?.message || "Report generation failed" };
+  }
+};
+
+export const getQuote = async (c: Context) => {
+  try {
+    const region = resolveRegion(c.req.query("region"), c);
+    const quote = getPaymentQuote(region);
+    return c.json({ success: true, data: quote });
+  } catch (e: any) {
+    return c.json({ success: false, message: e.message }, 500);
   }
 };
 
 export const createOrder = async (c: Context) => {
   try {
     const body = await c.req.json();
-    const { amount, scanId, currency: requestedCurrency } = body;
+    const { scanId, region: bodyRegion } = body;
 
-    if (!amount || !scanId)
-      return c.json({ success: false, message: "Missing fields" }, 400);
-
-    if (
-      requestedCurrency &&
-      String(requestedCurrency).trim().toUpperCase() !== RAZORPAY_CURRENCY
-    ) {
-      return c.json(
-        { success: false, message: "Only INR payments are supported" },
-        400,
-      );
+    if (!scanId) {
+      return c.json({ success: false, message: "scanId is required" }, 400);
     }
 
-    const numericAmount = Number(amount);
-    const expectedAmount = env.PAYMENT_UNLOCK_AMOUNT;
-    if (
-      !Number.isFinite(numericAmount) ||
-      Math.abs(numericAmount - expectedAmount) > 0.001
-    ) {
-      return c.json({ success: false, message: "Invalid payment amount" }, 400);
-    }
-
-    const amountPaise = amountToPaise(numericAmount);
+    const region = resolveRegion(bodyRegion, c);
+    const quote = getPaymentQuote(region);
 
     const order = await razorpay.orders.create({
-      amount: amountPaise,
-      currency: RAZORPAY_CURRENCY,
+      amount: quote.amountSubunits,
+      currency: quote.currency,
       receipt: `scan_${scanId}_${Date.now()}`,
-      notes: { scanId: String(scanId) },
+      notes: {
+        scanId: String(scanId),
+        region: quote.region,
+        total: String(quote.total),
+        currency: quote.currency,
+        amountSubunits: String(quote.amountSubunits),
+        gst_inclusive: "true",
+        gst_rate: `${quote.gstRatePercent}%`,
+      },
     });
 
-    if (String(order.currency).toUpperCase() !== RAZORPAY_CURRENCY) {
-      logError("CREATE_ORDER_CURRENCY", new Error("Razorpay order currency mismatch"), {
-        scanId,
-        currency: order.currency,
-      });
+    if (String(order.currency).toUpperCase() !== quote.currency) {
       return c.json(
-        { success: false, message: "Order was not created in INR" },
+        { success: false, message: "Order currency mismatch" },
         500,
       );
     }
@@ -146,18 +149,13 @@ export const createOrder = async (c: Context) => {
     return c.json({
       success: true,
       order,
-      currency: RAZORPAY_CURRENCY,
-      amount_paise: amountPaise,
+      quote,
       key_id: env.RAZORPAY_KEY_ID,
     });
   } catch (e: any) {
     logError("CREATE_ORDER_FAILED", e);
     const errorMsg = e.error?.description || e.message || "Order creation failed";
-    return c.json({
-      success: false,
-      message: errorMsg,
-      error: e
-    }, 500);
+    return c.json({ success: false, message: errorMsg }, 500);
   }
 };
 
@@ -193,12 +191,18 @@ export const verifyPayment = async (c: Context) => {
     }
 
     const order = await razorpay.orders.fetch(razorpay_order_id);
-    if (String(order.currency).toUpperCase() !== RAZORPAY_CURRENCY) {
+    const notesCurrency = String(order.notes?.currency || "").toUpperCase();
+    const orderCurrency = String(order.currency).toUpperCase();
+
+    if (notesCurrency && orderCurrency !== notesCurrency) {
       return c.json({ success: false, message: "Invalid order currency" }, 400);
     }
 
-    const expectedPaise = amountToPaise(env.PAYMENT_UNLOCK_AMOUNT);
-    if (Number(order.amount) !== expectedPaise) {
+    const expectedSubunits = Number(order.notes?.amountSubunits);
+    if (
+      !Number.isFinite(expectedSubunits) ||
+      Number(order.amount) !== expectedSubunits
+    ) {
       return c.json({ success: false, message: "Invalid order amount" }, 400);
     }
 
@@ -229,7 +233,7 @@ export const verifyPayment = async (c: Context) => {
 
 export const razorpayWebhook = async (c: any) => {
   try {
-    const body = await c.req.text(); // important: raw body
+    const body = await c.req.text();
     const signature = c.req.header("x-razorpay-signature");
 
     if (!signature) {
@@ -238,10 +242,6 @@ export const razorpayWebhook = async (c: any) => {
 
     const secret = env.RAZORPAY_WEBHOOK_SECRET;
     if (WEBHOOK_SECRET_PLACEHOLDERS.has(secret)) {
-      logError(
-        "PAYMENT_WEBHOOK",
-        new Error("RAZORPAY_WEBHOOK_SECRET is not set or is a placeholder."),
-      );
       return c.json({ success: false, message: "Webhook not configured" }, 500);
     }
 
@@ -257,7 +257,6 @@ export const razorpayWebhook = async (c: any) => {
 
     const event = JSON.parse(body);
 
-    // Handle successful payment
     if (event.event === "payment.captured") {
       const payment = event.payload?.payment?.entity;
       let scanId = payment?.notes?.scanId as string | undefined;
@@ -265,9 +264,7 @@ export const razorpayWebhook = async (c: any) => {
       if (!scanId && payment?.order_id) {
         try {
           const order = await razorpay.orders.fetch(payment.order_id);
-          if (String(order.currency).toUpperCase() === RAZORPAY_CURRENCY) {
-            scanId = order.notes?.scanId as string | undefined;
-          }
+          scanId = order.notes?.scanId as string | undefined;
         } catch (err) {
           logError("PAYMENT_WEBHOOK_ORDER_FETCH", err, {
             orderId: payment.order_id,

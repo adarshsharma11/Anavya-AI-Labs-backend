@@ -20,9 +20,6 @@ export const env = {
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || "",
-  /** Razorpay charges are always in Indian Rupees (INR). */
-  PAYMENT_CURRENCY: "INR" as const,
-  PAYMENT_UNLOCK_AMOUNT: Number(process.env.PAYMENT_UNLOCK_AMOUNT || "2.99"),
   FRONTEND_URL: process.env.FRONTEND_URL || "https://anavyaailabs.com",
   NODE_ENV: process.env.NODE_ENV || "development",
   ADMIN_API_KEY: process.env.ADMIN_API_KEY || "super_secret_admin_key_123",
