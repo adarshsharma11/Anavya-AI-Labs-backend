@@ -33,7 +33,7 @@ app.use(
       return env.FRONTEND_URL;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+    allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-client-region'],
   })
 )
 
