@@ -10,6 +10,10 @@ export const about = pgTable("about", {
   highlights: json("highlights").$type<{ value: string; label: string; detail: string }[]>().notNull(),
   principles: json("principles").$type<{ title: string; description: string }[]>().notNull(),
   culture: json("culture").$type<{ title: string; description: string }[]>().notNull(),
+  principlesTitle: text("principles_title").notNull(),
+  principlesDescription: text("principles_description").notNull(),
+  cultureTitle: text("culture_title").notNull(),
+  cultureDescription: text("culture_description").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

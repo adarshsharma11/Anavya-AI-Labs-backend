@@ -9,7 +9,7 @@ export const fallbackAboutData = [
     imageUrl: "https://images.unsplash.com/photo-1543269865-cbf427effbad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx0ZWFtJTIwY29sbGFib3JhdGlvbnxlbnwwfHx8fDE3Njc2OTE5MDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
     imageHint: "team collaboration",
     highlights: [
-      { value: "120+", label: "Sites analyzed", detail: "Across SaaS, fintech, and retail." },
+      { value: "130+", label: "Sites analyzed", detail: "Across SaaS, fintech, and retail." },
       { value: "4.9/5", label: "Client rating", detail: "Measured after every launch." },
       { value: "38%", label: "Avg. lift", detail: "Conversion wins within 90 days." }
     ],
@@ -22,7 +22,11 @@ export const fallbackAboutData = [
       { title: "Small, senior squads", description: "You work with a tight team of senior builders who ship quickly and stay accountable." },
       { title: "Transparent collaboration", description: "Weekly demos, shared dashboards, and candid advice on what to prioritize next." },
       { title: "Always learning", description: "We test new models, frameworks, and UX patterns weekly to keep results modern." }
-    ]
+    ],
+    principlesTitle: "The principles behind every engagement.",
+    principlesDescription: "We combine AI diagnostics, product strategy, and performance engineering to build experiences that feel fast, intentional, and unmistakably modern.",
+    cultureTitle: "How we like to work.",
+    cultureDescription: "Our delivery model stays lean and senior. You get direct access to the people doing the work and the data behind every decision."
   },
   {
     title: "Blending Artificial Intelligence with Human Ingenuity.",
@@ -44,7 +48,11 @@ export const fallbackAboutData = [
       { title: "Velocity Over Everything", description: "We build fast, test early, and ship continuous upgrades daily." },
       { title: "Data-Driven Mindset", description: "Every design decision is supported by telemetry and conversion numbers." },
       { title: "Radical Openness", description: "We discuss failures openly to build stronger, more resilient architectures." }
-    ]
+    ],
+    principlesTitle: "Our Core Principles",
+    principlesDescription: "We build advanced AI solutions to continuously diagnose and optimize web performance.",
+    cultureTitle: "Our Engineering Culture",
+    cultureDescription: "We prioritize speed, metrics, and transparency to deliver top-tier SaaS products."
   },
   {
     title: "Enterprise-Grade Digital Performance Analysis.",
@@ -66,7 +74,11 @@ export const fallbackAboutData = [
       { title: "Senior Ownership", description: "Engineers handle relationships directly, ensuring deep alignment." },
       { title: "Strict Transparency", description: "Clear pricing, direct communication, and open source scanning engines." },
       { title: "User Centered", description: "We test with actual users alongside simulation scripts to ensure accuracy." }
-    ]
+    ],
+    principlesTitle: "Enterprise Excellence",
+    principlesDescription: "We design for high availability, security compliance, and absolute developer empowerment.",
+    cultureTitle: "Enterprise Growth Culture",
+    cultureDescription: "We scale platforms seamlessly while staying close to the real user experience."
   }
 ];
 
