@@ -30,6 +30,15 @@ export const runWebsiteScan = async (url: string) => {
     const h1Count = $("h1").length;
     const canonical = $('link[rel="canonical"]').attr("href");
 
+    // ================= SEO META EXTRACTION =================
+    const metaRobots = $('meta[name="robots"]').attr("content") || "N/A";
+    const favicon = $('link[rel*="icon"]').attr("href");
+
+    // ================= SEO METRICS CALCULATIONS =================
+    const titleChars = title.length;
+    const metaDescriptionChars = metaDesc ? metaDesc.length : undefined;
+    const metaDescriptionWords = metaDesc ? metaDesc.trim().split(/\s+/).filter(Boolean).length : undefined;
+
     // ================= SOCIAL =================
     const ogTitle = $('meta[property="og:title"]').attr("content");
     const ogDesc = $('meta[property="og:description"]').attr("content");
@@ -227,6 +236,15 @@ export const runWebsiteScan = async (url: string) => {
         images: totalImages,
         scripts,
         links,
+        titleChars,
+        metaDescriptionChars,
+        metaDescriptionWords,
+      },
+
+      seoMeta: {
+        canonical: !!canonical,
+        metaRobots,
+        favicon: !!favicon,
       },
 
       social: {
@@ -269,6 +287,14 @@ export const runWebsiteScan = async (url: string) => {
         images: 0,
         scripts: 0,
         links: 0,
+        titleChars: undefined,
+        metaDescriptionChars: undefined,
+        metaDescriptionWords: undefined,
+      },
+      seoMeta: {
+        canonical: false,
+        metaRobots: "N/A",
+        favicon: false,
       },
       social: {
         ogTags: false,
