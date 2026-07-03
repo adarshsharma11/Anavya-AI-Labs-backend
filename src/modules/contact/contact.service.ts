@@ -1,4 +1,4 @@
-import { createContactRepo, getContactsRepo } from "./contact.repository";
+import { createContactRepo, getContactsRepo, updateContactRepo, deleteContactRepo } from "./contact.repository";
 
 export const createContactService = async (data: {
   name: string;
@@ -11,4 +11,12 @@ export const createContactService = async (data: {
 
 export const getContactsService = async () => {
   return await getContactsRepo();
+};
+
+export const updateContactService = async (id: number, status: string) => {
+  return await updateContactRepo(id, { status, updatedAt: new Date() });
+};
+
+export const deleteContactService = async (id: number) => {
+  await deleteContactRepo(id);
 };

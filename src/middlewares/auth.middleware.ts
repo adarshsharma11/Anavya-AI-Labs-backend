@@ -50,3 +50,22 @@ export const verifyAdmin = async (c: Context, next: Next) => {
 
   await next();
 };
+
+export const verifyAdminToken = async (c: Context, next: Next) => {
+  let isAuthed = false;
+  const res = await verifyToken(c, async () => {
+    isAuthed = true;
+  });
+
+  if (!isAuthed) {
+    return res;
+  }
+
+  const user = c.get("user") as { id: number; email: string; role?: string } | undefined;
+  if (!user || user.role !== "admin") {
+    return c.json({ success: false, message: "Forbidden. Admin access required." }, 403);
+  }
+
+  await next();
+};
+

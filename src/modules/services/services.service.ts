@@ -1,6 +1,8 @@
 import {
   getServicesRepo,
   createServiceRepo,
+  updateServiceRepo,
+  deleteServiceRepo,
 } from "./services.repository";
 import { getPageBySlugService } from "../pages/pages.service";
 
@@ -14,6 +16,14 @@ export const getServicesService = async () => {
   };
 };
 
-export const createServiceService = async (body:any) => {
+export const createServiceService = async (body: any) => {
   return await createServiceRepo(body);
+};
+
+export const updateServiceService = async (id: number, body: any) => {
+  return await updateServiceRepo(id, body);
+};
+
+export const deleteServiceService = async (id: number) => {
+  await deleteServiceRepo(id);
 };
