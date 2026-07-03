@@ -33,6 +33,7 @@ export const signupService = async (data: any) => {
     phoneNumber: phoneNumber || null,
     authProvider: "local",
     emailVerifiedAt: new Date(),
+    role: "user", // Explicitly enforce role as 'user' for public signups
   });
 
   return { success: true, message: "Account created successfully. You can now login." };
@@ -51,7 +52,7 @@ export const loginService = async (data: any) => {
   if (!isValid) throw new Error("Invalid credentials");
 
   // Tokens
-  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
   // Refresh token
   const refreshTokenString = crypto.randomBytes(40).toString('hex');
@@ -64,7 +65,7 @@ export const loginService = async (data: any) => {
 
   return {
     success: true,
-    user: { id: user.id, name: user.name, email: user.email },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
     accessToken,
     refreshToken: refreshTokenString,
   };
@@ -83,7 +84,7 @@ export const refreshTokenService = async (token: string) => {
   const user = await authRepo.getUserById(rt.userId);
   if (!user) throw new Error("User associated with token not found");
 
-  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
   // Roll refresh token for extra security
   const newRefreshToken = crypto.randomBytes(40).toString('hex');

@@ -12,8 +12,7 @@ import settingsRoute from './api/v1/public/settings.route'
 import contactRoute from './api/v1/public/contact.route'
 import portfolioRoute from './api/v1/public/portfolio.route'
 import aboutRoute from './api/v1/public/about.route'
-
-
+import adminRoute from './api/v1/admin.route'
 
 import { env } from './config/env'
 
@@ -66,7 +65,6 @@ app.route(apiPrefix, settingsRoute)
 app.route(apiPrefix, contactRoute)
 app.route(apiPrefix, portfolioRoute)
 app.route(apiPrefix, aboutRoute)
-
-
+app.route(apiPrefix, adminRoute)
 
 export default app

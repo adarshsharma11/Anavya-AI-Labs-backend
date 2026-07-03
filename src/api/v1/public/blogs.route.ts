@@ -7,14 +7,16 @@ import {
   deleteBlog,
 } from "../../../modules/blogs/blogs.controller";
 
+import { verifyAdminToken } from "../../../middlewares/auth.middleware";
+
 const app = new Hono();
 
 app.get("/blogs", getBlogs);
 app.get("/blogs/:slug", getBlogBySlug);
 
-// No authorization required for blog management
-app.post("/blogs", createBlog);
-app.put("/blogs/:slug", updateBlog);
-app.delete("/blogs/:slug", deleteBlog);
+// Only admin authorized for blog management
+app.post("/blogs", verifyAdminToken, createBlog);
+app.put("/blogs/:slug", verifyAdminToken, updateBlog);
+app.delete("/blogs/:slug", verifyAdminToken, deleteBlog);
 
 export default app;

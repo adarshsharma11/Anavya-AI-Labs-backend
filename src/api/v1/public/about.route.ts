@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getAbout, createAbout } from "../../../modules/about/about.controller";
-import { verifyToken } from "../../../middlewares/auth.middleware";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware";
 
 const app = new Hono();
 
@@ -8,6 +8,6 @@ const app = new Hono();
 app.get("/about", getAbout);
 
 // admin create
-app.post("/about", verifyToken, createAbout);
+app.post("/about", verifyAdminToken, createAbout);
 
 export default app;
