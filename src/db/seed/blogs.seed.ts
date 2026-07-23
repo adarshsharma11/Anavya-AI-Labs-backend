@@ -17,11 +17,11 @@ export const fallbackBlogsData = [
     authorAvatar:
       "https://api.dicebear.com/7.x/initials/svg?seed=Anavya",
     tags: ["SEO", "Performance", "Growth"],
-    content: [
-      "Core Web Vitals are a set of specific factors that Google considers important in a webpage's overall user experience.",
-      "They consist of three specific page speed and user interaction measurements: largest contentful paint, first input delay, and cumulative layout shift.",
-      "Improving these metrics not only helps with SEO but also directly impacts conversion rates.",
-    ],
+    content: `Core Web Vitals are a set of specific factors that Google considers important in a webpage's overall user experience.
+
+They consist of three specific page speed and user interaction measurements: largest contentful paint, first input delay, and cumulative layout shift.
+
+Improving these metrics not only helps with SEO but also directly impacts conversion rates.`,
   },
   {
     slug: "how-to-fix-broken-links",
@@ -38,23 +38,15 @@ export const fallbackBlogsData = [
     authorAvatar:
       "https://api.dicebear.com/7.x/initials/svg?seed=AnavyaTech",
     tags: ["Audit", "Links", "SEO"],
-    content: [
-      "A broken link, often known as a dead link, is a link on a web page that no longer works because the website is experiencing one or more issues.",
-      "These issues can include the destination webpage being moved or deleted, or the URL being mistyped.",
-      "Using tools like Anavya AI Labs, you can automatically scan your entire site for 404 errors and fix them before they impact your rankings.",
-    ],
+    content: `A broken link, often known as a dead link, is a link on a web page that no longer works because the website is experiencing one or more issues.
+
+These issues can include the destination webpage being moved or deleted, or the URL being mistyped.
+
+Using tools like Anavya AI Labs, you can automatically scan your entire site for 404 errors and fix them before they impact your rankings.`,
   },
 ];
 
 export async function seedBlogs() {
-  const existingBlogs = await db.query.blogs.findMany();
-
-  if (existingBlogs.length > 0) {
-    console.log("Blogs already exist. Skipping seed.");
-    return;
-  }
-
-  await db.insert(blogs).values(fallbackBlogsData);
-
-  console.log("✓ Default blogs seeded");
+  await db.delete(blogs);
+  console.log("✓ Blogs table cleared to activate dynamic seed blog fallback");
 }
