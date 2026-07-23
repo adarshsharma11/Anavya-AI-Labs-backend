@@ -26,6 +26,14 @@ export const getBlogBySlug = async (c: Context) => {
     const data = await getBlogBySlugService(slug);
     
     if (!data) {
+      // Fallback to seed data only if the database is currently empty
+      const dbBlogs = await getBlogsService();
+      if (!dbBlogs || dbBlogs.length === 0) {
+        const fallback = fallbackBlogsData.find((b) => b.slug === slug);
+        if (fallback) {
+          return c.json({ success: true, data: fallback });
+        }
+      }
       return c.json({ success: false, message: "Blog not found" }, 404);
     }
     
