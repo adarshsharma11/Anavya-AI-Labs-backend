@@ -10,7 +10,7 @@ import { verifyAdminToken } from "../../middlewares/auth.middleware";
 const adminRoute = new Hono();
 
 // Apply verifyAdminToken to all administrative endpoints
-adminRoute.use("*", verifyAdminToken);
+adminRoute.use("/admin/*", verifyAdminToken);
 
 adminRoute.get("/admin/analytics", getAdminAnalytics);
 adminRoute.get("/admin/users", getAdminUsers);

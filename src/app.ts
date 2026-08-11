@@ -13,6 +13,8 @@ import contactRoute from './api/v1/public/contact.route'
 import portfolioRoute from './api/v1/public/portfolio.route'
 import aboutRoute from './api/v1/public/about.route'
 import adminRoute from './api/v1/admin.route'
+import geoRoute from './api/v1/public/geo.route'
+
 
 import { env } from './config/env'
 
@@ -53,6 +55,8 @@ app.get('/api/test', (c) => {
 })
 
 // routes
+app.route(apiPrefix, geoRoute)
+app.route('/api', geoRoute)
 app.route(apiPrefix, pricingRoute)
 app.route(apiPrefix, scanRoute)
 app.route(apiPrefix, servicesRoute)
@@ -66,5 +70,6 @@ app.route(apiPrefix, contactRoute)
 app.route(apiPrefix, portfolioRoute)
 app.route(apiPrefix, aboutRoute)
 app.route(apiPrefix, adminRoute)
+
 
 export default app
