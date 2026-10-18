@@ -88,7 +88,7 @@ export const generatePdfReport = async (scan: any, companyName?: string, company
   });
 
   const page = await browser.newPage();
-  await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+  await page.setContent(htmlContent, { waitUntil: 'load' });
   const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
   
   await browser.close();
