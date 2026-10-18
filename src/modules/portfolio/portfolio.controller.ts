@@ -27,6 +27,9 @@ export const getPortfolio = async (c: Context) => {
 export const getPortfolioBySlug = async (c: Context) => {
   try {
     const slug = c.req.param("slug");
+    if (!slug) {
+      return c.json({ success: false, message: "Slug parameter is required" }, 400);
+    }
     const data = await getPortfolioBySlugService(slug);
     
     if (!data) {
@@ -80,6 +83,9 @@ export const createPortfolio = async (c: Context) => {
 export const updatePortfolio = async (c: Context) => {
   try {
     const slug = c.req.param("slug");
+    if (!slug) {
+      return c.json({ success: false, message: "Slug parameter is required" }, 400);
+    }
     const body = await c.req.json();
     const res = await updatePortfolioService(slug, body);
     
@@ -96,6 +102,9 @@ export const updatePortfolio = async (c: Context) => {
 export const deletePortfolio = async (c: Context) => {
   try {
     const slug = c.req.param("slug");
+    if (!slug) {
+      return c.json({ success: false, message: "Slug parameter is required" }, 400);
+    }
     const res = await deletePortfolioService(slug);
     
     if (!res) {

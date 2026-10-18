@@ -23,6 +23,9 @@ export const getBlogs = async (c: Context) => {
 export const getBlogBySlug = async (c: Context) => {
   try {
     const slug = c.req.param("slug");
+    if (!slug) {
+      return c.json({ success: false, message: "Slug parameter is required" }, 400);
+    }
     const data = await getBlogBySlugService(slug);
     
     if (!data) {
@@ -90,6 +93,9 @@ export const createBlog = async (c: Context) => {
 export const updateBlog = async (c: Context) => {
   try {
     const slug = c.req.param("slug");
+    if (!slug) {
+      return c.json({ success: false, message: "Slug parameter is required" }, 400);
+    }
     const body = await c.req.json();
     const res = await updateBlogService(slug, body);
     
@@ -106,6 +112,9 @@ export const updateBlog = async (c: Context) => {
 export const deleteBlog = async (c: Context) => {
   try {
     const slug = c.req.param("slug");
+    if (!slug) {
+      return c.json({ success: false, message: "Slug parameter is required" }, 400);
+    }
     const res = await deleteBlogService(slug);
     
     if (!res) {
