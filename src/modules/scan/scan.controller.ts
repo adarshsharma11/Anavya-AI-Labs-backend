@@ -52,11 +52,11 @@ export const getScan = async (c: Context) => {
   }
 };
 
-import { generatePdfReport } from "../../lib/pdfGenerator";
 import { getProfileService } from "../dashboard/dashboard.service";
 
 export const getScanPdf = async (c: Context) => {
   try {
+    const { generatePdfReport } = await import("../../lib/pdfGenerator");
     const id = Number(c.req.param("id"));
     const scanData = await getScanService(id);
     

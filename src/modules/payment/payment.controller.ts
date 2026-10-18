@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import crypto from "crypto";
-import { razorpay } from "../../lib/razorPay";
+import { getRazorpay } from "../../lib/razorPay";
 import { getScanRepo, updateScanRepo } from "../scan/scan.repository";
 import { generateFullReport } from "../../lib/aiReport";
 import { sendReportReadyEmail } from "../../lib/sendOTP";
@@ -124,7 +124,7 @@ export const createOrder = async (c: Context) => {
     const region = resolveRegion(bodyRegion, c);
     const quote = getPaymentQuote(region);
 
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount: quote.amountSubunits,
       currency: quote.currency,
       receipt: `scan_${scanId}_${Date.now()}`,
@@ -190,7 +190,7 @@ export const verifyPayment = async (c: Context) => {
       return c.json({ success: false, message: "scanId is required" }, 400);
     }
 
-    const order = await razorpay.orders.fetch(razorpay_order_id);
+    const order = await getRazorpay().orders.fetch(razorpay_order_id);
     const notesCurrency = String(order.notes?.currency || "").toUpperCase();
     const orderCurrency = String(order.currency).toUpperCase();
 
@@ -263,7 +263,7 @@ export const razorpayWebhook = async (c: any) => {
 
       if (!scanId && payment?.order_id) {
         try {
-          const order = await razorpay.orders.fetch(payment.order_id);
+          const order = await getRazorpay().orders.fetch(payment.order_id);
           scanId = order.notes?.scanId as string | undefined;
         } catch (err) {
           logError("PAYMENT_WEBHOOK_ORDER_FETCH", err, {
