@@ -5,7 +5,6 @@ import { seedPricing } from "./pricing.seed.js";
 import { seedServices } from "./services.seed.js";
 import { seedPortfolio } from "./portfolio.seed.js";
 import { seedAbout } from "./about.seed.js";
-import { seedAdmin } from "./admin.seed.js";
 
 async function runSeeds() {
   try {
@@ -16,7 +15,6 @@ async function runSeeds() {
     await seedServices();
     await seedPortfolio();
     await seedAbout();
-    await seedAdmin();
 
     console.log("All seeds completed");
   } catch (error) {
