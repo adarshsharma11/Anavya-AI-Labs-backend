@@ -4,7 +4,7 @@ import {
   createBlogRepo,
   updateBlogRepo,
   deleteBlogRepo,
-} from "./blogs.repository";
+} from "./blogs.repository.js";
 
 export const getBlogsService = async () => {
   return await getBlogsRepo();

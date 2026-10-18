@@ -2,15 +2,15 @@ import type { Context } from "hono";
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-import { checkRobots } from "./services/robotsCheck";
-import { checkLlmsTxt } from "./services/llmsTxtCheck";
-import { checkSitemap } from "./services/sitemapCheck";
-import { checkSchema } from "./services/schemaCheck";
-import { checkContentStructure } from "./services/contentStructure";
-import { checkReadability } from "./services/readabilityCheck";
-import { checkMetadata } from "./services/metadataCheck";
-import { checkTechnical } from "./services/technicalCheck";
-import { calculateGeoScore } from "./utils/scoring";
+import { checkRobots } from "./services/robotsCheck.js";
+import { checkLlmsTxt } from "./services/llmsTxtCheck.js";
+import { checkSitemap } from "./services/sitemapCheck.js";
+import { checkSchema } from "./services/schemaCheck.js";
+import { checkContentStructure } from "./services/contentStructure.js";
+import { checkReadability } from "./services/readabilityCheck.js";
+import { checkMetadata } from "./services/metadataCheck.js";
+import { checkTechnical } from "./services/technicalCheck.js";
+import { calculateGeoScore } from "./utils/scoring.js";
 
 export const runGeoCheck = async (c: Context) => {
   try {

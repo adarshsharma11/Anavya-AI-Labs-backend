@@ -60,7 +60,7 @@ const ReportSchema = z.object({
   estimatedTrafficImpact: z.string(),
 });
 
-import { logError } from "./errorLog";
+import { logError } from "./errorLog.js";
 
 export function buildDegradedReport(reason: string): any {
   return {

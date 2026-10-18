@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../db/db";
-import { pages } from "../../db/schema/pages";
+import { db } from "../../db/db.js";
+import { pages } from "../../db/schema/pages.js";
 
 export const getPageBySlugRepo = async (slug: string) => {
   const page = await db.select().from(pages).where(eq(pages.slug, slug)).limit(1);

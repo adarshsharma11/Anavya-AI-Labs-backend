@@ -3,7 +3,7 @@ import {
   getPageBySlugService,
   createPageService,
   updatePageService,
-} from "./pages.service";
+} from "./pages.service.js";
 
 export const getPage = async (c: Context) => {
   const slug = c.req.query("slug");

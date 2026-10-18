@@ -1,5 +1,5 @@
-import { db } from "../../db/db";
-import { services } from "../../db/schema/services";
+import { db } from "../../db/db.js";
+import { services } from "../../db/schema/services.js";
 import { eq } from "drizzle-orm";
 
 export const getServicesRepo = async () => {

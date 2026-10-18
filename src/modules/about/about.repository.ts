@@ -1,5 +1,5 @@
-import { db } from "../../db/db";
-import { about } from "../../db/schema/about";
+import { db } from "../../db/db.js";
+import { about } from "../../db/schema/about.js";
 import { desc } from "drizzle-orm";
 
 export const getAboutRepo = async () => {

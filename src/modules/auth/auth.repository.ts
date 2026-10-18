@@ -1,6 +1,6 @@
-import { db } from "../../db/db";
-import { users } from "../../db/schema/user";
-import { otps, refreshTokens } from "../../db/schema/auth";
+import { db } from "../../db/db.js";
+import { users } from "../../db/schema/user.js";
+import { otps, refreshTokens } from "../../db/schema/auth.js";
 import { eq, and, gt } from "drizzle-orm";
 
 // -- USER --

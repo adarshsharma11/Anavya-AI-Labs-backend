@@ -42,7 +42,7 @@ export const optionalVerifyToken = async (c: Context, next: Next) => {
 
 export const verifyAdmin = async (c: Context, next: Next) => {
   const adminKey = c.req.header("x-admin-key");
-  const { env } = await import("../config/env");
+  const { env } = await import("../config/env.js");
 
   if (!adminKey || adminKey !== env.ADMIN_API_KEY) {
     return c.json({ success: false, message: "Unauthorized. Admin access required." }, 401);

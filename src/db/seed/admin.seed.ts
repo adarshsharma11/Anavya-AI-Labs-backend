@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { users } from "../schema/user";
+import { db } from "../db.js";
+import { users } from "../schema/user.js";
 import { eq } from "drizzle-orm";
 
 export async function seedAdmin() {

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { signup, login, refresh, forgotPassword, resetPassword } from '../../../modules/auth/auth.controller';
+import { signup, login, refresh, forgotPassword, resetPassword } from '../../../modules/auth/auth.controller.js';
 
 const authRoute = new Hono();
 

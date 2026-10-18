@@ -5,9 +5,9 @@ import {
   createPortfolio,
   updatePortfolio,
   deletePortfolio,
-} from "../../../modules/portfolio/portfolio.controller";
+} from "../../../modules/portfolio/portfolio.controller.js";
 
-import { verifyAdminToken } from "../../../middlewares/auth.middleware";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware.js";
 
 const app = new Hono();
 

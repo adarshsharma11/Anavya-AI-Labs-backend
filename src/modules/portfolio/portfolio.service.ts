@@ -4,7 +4,7 @@ import {
   createPortfolioRepo,
   updatePortfolioRepo,
   deletePortfolioRepo,
-} from "./portfolio.repository";
+} from "./portfolio.repository.js";
 
 export const getPortfolioService = async () => {
   return await getPortfolioRepo();

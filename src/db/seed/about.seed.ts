@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { about } from "../schema/about";
+import { db } from "../db.js";
+import { about } from "../schema/about.js";
 
 export const fallbackAboutData = [
   {

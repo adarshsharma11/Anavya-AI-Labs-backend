@@ -1,17 +1,17 @@
 import type { Context } from "hono";
 import crypto from "crypto";
-import { getRazorpay } from "../../lib/razorPay";
-import { getScanRepo, updateScanRepo } from "../scan/scan.repository";
-import { generateFullReport } from "../../lib/aiReport";
-import { sendReportReadyEmail } from "../../lib/sendOTP";
-import { getUserById } from "../auth/auth.repository";
+import { getRazorpay } from "../../lib/razorPay.js";
+import { getScanRepo, updateScanRepo } from "../scan/scan.repository.js";
+import { generateFullReport } from "../../lib/aiReport.js";
+import { sendReportReadyEmail } from "../../lib/sendOTP.js";
+import { getUserById } from "../auth/auth.repository.js";
 
-import { logError } from "../../lib/errorLog";
-import { env } from "../../config/env";
+import { logError } from "../../lib/errorLog.js";
+import { env } from "../../config/env.js";
 import {
   getPaymentQuote,
   type PaymentRegion,
-} from "../../lib/paymentConfig";
+} from "../../lib/paymentConfig.js";
 
 const WEBHOOK_SECRET_PLACEHOLDERS = new Set([
   "",

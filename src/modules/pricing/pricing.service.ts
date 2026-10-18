@@ -1,4 +1,4 @@
-import { findActivePlans, findPlanById } from "./pricing.repository";
+import { findActivePlans, findPlanById } from "./pricing.repository.js";
 
 const transformPrice = (plan: any) => {
   return {

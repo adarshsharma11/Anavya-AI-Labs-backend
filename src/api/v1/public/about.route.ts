@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getAbout, createAbout } from "../../../modules/about/about.controller";
-import { verifyAdminToken } from "../../../middlewares/auth.middleware";
+import { getAbout, createAbout } from "../../../modules/about/about.controller.js";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware.js";
 
 const app = new Hono();
 

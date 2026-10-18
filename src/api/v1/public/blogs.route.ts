@@ -5,9 +5,9 @@ import {
   createBlog,
   updateBlog,
   deleteBlog,
-} from "../../../modules/blogs/blogs.controller";
+} from "../../../modules/blogs/blogs.controller.js";
 
-import { verifyAdminToken } from "../../../middlewares/auth.middleware";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware.js";
 
 const app = new Hono();
 

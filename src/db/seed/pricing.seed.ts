@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { plans, type InsertPlan } from "../schema/plan";
+import { db } from "../db.js";
+import { plans, type InsertPlan } from "../schema/plan.js";
 
 export async function seedPricing() {
   const existingPlans = await db.query.plans.findMany();

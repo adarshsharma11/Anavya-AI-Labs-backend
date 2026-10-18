@@ -1,11 +1,11 @@
 import "dotenv/config";
 
-import { seedBlogs } from "./blogs.seed";
-import { seedPricing } from "./pricing.seed";
-import { seedServices } from "./services.seed";
-import { seedPortfolio } from "./portfolio.seed";
-import { seedAbout } from "./about.seed";
-import { seedAdmin } from "./admin.seed";
+import { seedBlogs } from "./blogs.seed.js";
+import { seedPricing } from "./pricing.seed.js";
+import { seedServices } from "./services.seed.js";
+import { seedPortfolio } from "./portfolio.seed.js";
+import { seedAbout } from "./about.seed.js";
+import { seedAdmin } from "./admin.seed.js";
 
 async function runSeeds() {
   try {

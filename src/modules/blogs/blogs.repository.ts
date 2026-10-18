@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../db/db";
-import { blogs } from "../../db/schema/blogs";
+import { db } from "../../db/db.js";
+import { blogs } from "../../db/schema/blogs.js";
 
 export const getBlogsRepo = async () => {
   return await db.select().from(blogs).orderBy(blogs.createdAt);

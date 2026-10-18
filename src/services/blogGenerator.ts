@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { createBlogRepo, getBlogBySlugRepo } from "../modules/blogs/blogs.repository";
-import { logError } from "../lib/errorLog";
+import { createBlogRepo, getBlogBySlugRepo } from "../modules/blogs/blogs.repository.js";
+import { logError } from "../lib/errorLog.js";
 
 const BLOG_TOPICS = [
   "Why your website loads slowly: Performance audit secrets",

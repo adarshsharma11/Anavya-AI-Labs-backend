@@ -1,5 +1,5 @@
-import { db } from "../../db/db";
-import { plans } from "../../db/schema";
+import { db } from "../../db/db.js";
+import { plans } from "../../db/schema/index.js";
 import { eq, asc } from "drizzle-orm";
 
 export const findActivePlans = async () => {

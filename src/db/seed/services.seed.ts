@@ -1,6 +1,6 @@
-import { db } from "../db";
-import { services } from "../schema/services";
-import { pages } from "../schema/pages";
+import { db } from "../db.js";
+import { services } from "../schema/services.js";
+import { pages } from "../schema/pages.js";
 import { eq } from "drizzle-orm";
 
 export async function seedServices() {

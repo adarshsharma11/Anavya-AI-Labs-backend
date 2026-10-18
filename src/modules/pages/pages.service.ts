@@ -2,7 +2,7 @@ import {
   getPageBySlugRepo,
   createPageRepo,
   updatePageRepo,
-} from "./pages.repository";
+} from "./pages.repository.js";
 
 export const getPageBySlugService = async (slug: string) => {
   return await getPageBySlugRepo(slug);

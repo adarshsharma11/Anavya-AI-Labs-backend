@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { createScanService, getScanService } from "./scan.service";
-import { checkRateLimit, checkDailyScanLimit } from "../../lib/rateLimiter";
+import { createScanService, getScanService } from "./scan.service.js";
+import { checkRateLimit, checkDailyScanLimit } from "../../lib/rateLimiter.js";
 
 export const createScan = async (c: Context) => {
   try {
@@ -52,11 +52,11 @@ export const getScan = async (c: Context) => {
   }
 };
 
-import { getProfileService } from "../dashboard/dashboard.service";
+import { getProfileService } from "../dashboard/dashboard.service.js";
 
 export const getScanPdf = async (c: Context) => {
   try {
-    const { generatePdfReport } = await import("../../lib/pdfGenerator");
+    const { generatePdfReport } = await import("../../lib/pdfGenerator.js");
     const id = Number(c.req.param("id"));
     const scanData = await getScanService(id);
     

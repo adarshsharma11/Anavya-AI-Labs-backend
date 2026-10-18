@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { submitContactForm, getContacts, updateContactStatus, deleteContact } from "../../../modules/contact/contact.controller";
-import { verifyAdminToken } from "../../../middlewares/auth.middleware";
+import { submitContactForm, getContacts, updateContactStatus, deleteContact } from "../../../modules/contact/contact.controller.js";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware.js";
 
 const contactRoute = new Hono();
 

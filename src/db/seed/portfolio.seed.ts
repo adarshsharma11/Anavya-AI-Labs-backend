@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { portfolio } from "../schema/portfolio";
+import { db } from "../db.js";
+import { portfolio } from "../schema/portfolio.js";
 
 export const fallbackPortfolioData = [
   {

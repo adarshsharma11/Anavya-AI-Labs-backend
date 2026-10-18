@@ -1,5 +1,5 @@
-import * as authRepo from './auth.repository';
-import { sendOTP } from '../../lib/sendOTP';
+import * as authRepo from './auth.repository.js';
+import { sendOTP } from '../../lib/sendOTP.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 

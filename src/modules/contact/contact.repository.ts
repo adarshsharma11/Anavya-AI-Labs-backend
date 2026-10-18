@@ -1,5 +1,5 @@
-import { db } from "../../db/db";
-import { contacts } from "../../db/schema/contact";
+import { db } from "../../db/db.js";
+import { contacts } from "../../db/schema/contact.js";
 import { eq } from "drizzle-orm";
 
 export const createContactRepo = async (data: any) => {

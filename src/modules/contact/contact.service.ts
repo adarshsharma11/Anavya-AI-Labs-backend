@@ -1,4 +1,4 @@
-import { createContactRepo, getContactsRepo, updateContactRepo, deleteContactRepo } from "./contact.repository";
+import { createContactRepo, getContactsRepo, updateContactRepo, deleteContactRepo } from "./contact.repository.js";
 
 export const createContactService = async (data: {
   name: string;

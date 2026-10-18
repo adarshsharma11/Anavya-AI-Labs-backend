@@ -5,8 +5,8 @@ import {
   createBlogService,
   updateBlogService,
   deleteBlogService,
-} from "./blogs.service";
-import { fallbackBlogsData } from "../../db/seed/blogs.seed";
+} from "./blogs.service.js";
+import { fallbackBlogsData } from "../../db/seed/blogs.seed.js";
 
 export const getBlogs = async (c: Context) => {
   try {

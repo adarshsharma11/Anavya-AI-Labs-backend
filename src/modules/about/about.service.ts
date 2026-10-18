@@ -1,7 +1,7 @@
-import { getAboutRepo, createAboutRepo } from "./about.repository";
-import { fallbackAboutData } from "../../db/seed/about.seed";
-import { db } from "../../db/db";
-import { scans } from "../../db/schema/scan";
+import { getAboutRepo, createAboutRepo } from "./about.repository.js";
+import { fallbackAboutData } from "../../db/seed/about.seed.js";
+import { db } from "../../db/db.js";
+import { scans } from "../../db/schema/scan.js";
 import { sql } from "drizzle-orm";
 
 export const getAboutService = async () => {

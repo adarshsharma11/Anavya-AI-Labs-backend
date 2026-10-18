@@ -1,11 +1,11 @@
-import { createScanRepo, updateScanRepo, getScanRepo } from "./scan.repository";
-import { runWebsiteScan } from "../../lib/scanner";
-import { compareScans } from "../../lib/compareScan";
-import { generateFullReport } from "../../lib/aiReport";
-import { sendReportReadyEmail } from "../../lib/sendOTP";
-import { getUserById } from "../auth/auth.repository";
+import { createScanRepo, updateScanRepo, getScanRepo } from "./scan.repository.js";
+import { runWebsiteScan } from "../../lib/scanner.js";
+import { compareScans } from "../../lib/compareScan.js";
+import { generateFullReport } from "../../lib/aiReport.js";
+import { sendReportReadyEmail } from "../../lib/sendOTP.js";
+import { getUserById } from "../auth/auth.repository.js";
 
-import { logError } from "../../lib/errorLog";
+import { logError } from "../../lib/errorLog.js";
 
 export const createScanService = async (
   url: string,

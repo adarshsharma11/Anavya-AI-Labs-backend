@@ -3,8 +3,8 @@ import {
   createServiceRepo,
   updateServiceRepo,
   deleteServiceRepo,
-} from "./services.repository";
-import { getPageBySlugService } from "../pages/pages.service";
+} from "./services.repository.js";
+import { getPageBySlugService } from "../pages/pages.service.js";
 
 export const getServicesService = async () => {
   const page = await getPageBySlugService("service");

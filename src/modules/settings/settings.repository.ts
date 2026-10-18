@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../db/db";
-import { settings } from "../../db/schema/settings";
+import { db } from "../../db/db.js";
+import { settings } from "../../db/schema/settings.js";
 
 export const getSettingsRepo = async () => {
   return await db.select().from(settings);

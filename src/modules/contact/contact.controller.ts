@@ -1,6 +1,6 @@
 import type { Context } from "hono";
-import { createContactService, getContactsService, updateContactService, deleteContactService } from "./contact.service";
-import { checkRateLimit } from "../../lib/rateLimiter";
+import { createContactService, getContactsService, updateContactService, deleteContactService } from "./contact.service.js";
+import { checkRateLimit } from "../../lib/rateLimiter.js";
 
 export const submitContactForm = async (c: Context) => {
   try {

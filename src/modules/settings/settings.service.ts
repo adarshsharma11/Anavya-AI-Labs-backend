@@ -1,4 +1,4 @@
-import { getSettingsRepo, getSettingByKeyRepo, upsertSettingRepo } from "./settings.repository";
+import { getSettingsRepo, getSettingByKeyRepo, upsertSettingRepo } from "./settings.repository.js";
 
 export const getSiteSettingsService = async () => {
   const allSettings = await getSettingsRepo();

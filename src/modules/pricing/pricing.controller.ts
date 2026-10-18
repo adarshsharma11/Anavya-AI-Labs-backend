@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { getPublicPlansService, getSinglePlanService } from "./pricing.service";
+import { getPublicPlansService, getSinglePlanService } from "./pricing.service.js";
 
 export const getPublicPlans = async (c: Context) => {
   try {

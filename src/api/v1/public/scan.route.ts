@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { createScan, getScan, getScanPdf } from "../../../modules/scan/scan.controller";
-import { optionalVerifyToken } from "../../../middlewares/auth.middleware";
+import { createScan, getScan, getScanPdf } from "../../../modules/scan/scan.controller.js";
+import { optionalVerifyToken } from "../../../middlewares/auth.middleware.js";
 
 
 const scanRoute = new Hono();

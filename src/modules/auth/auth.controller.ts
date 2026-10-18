@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
-import * as authService from './auth.service.ts';
-import { checkOtpRateLimit } from '../../lib/rateLimiter';
+import * as authService from './auth.service.js';
+import { checkOtpRateLimit } from '../../lib/rateLimiter.js';
 
 export const signup = async (c: Context) => {
   const body = await c.req.json();

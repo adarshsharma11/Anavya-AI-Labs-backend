@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { getAboutService, createAboutService } from "./about.service";
+import { getAboutService, createAboutService } from "./about.service.js";
 
 export const getAbout = async (c: Context) => {
   try {

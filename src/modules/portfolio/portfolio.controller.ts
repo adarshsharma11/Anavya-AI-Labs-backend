@@ -5,8 +5,8 @@ import {
   createPortfolioService,
   updatePortfolioService,
   deletePortfolioService,
-} from "./portfolio.service";
-import { fallbackPortfolioData } from "../../db/seed/portfolio.seed";
+} from "./portfolio.service.js";
+import { fallbackPortfolioData } from "../../db/seed/portfolio.seed.js";
 
 export const getPortfolio = async (c: Context) => {
   try {

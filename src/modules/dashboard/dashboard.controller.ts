@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import * as dashboardService from './dashboard.service';
+import * as dashboardService from './dashboard.service.js';
 
 export const getProfile = async (c: Context) => {
   const user = c.get('user'); // from verifyToken middleware

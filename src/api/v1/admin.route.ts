@@ -4,8 +4,8 @@ import {
   getAdminUsers,
   deleteAdminUser,
   getAdminScans,
-} from "../../modules/admin/admin.controller";
-import { verifyAdminToken } from "../../middlewares/auth.middleware";
+} from "../../modules/admin/admin.controller.js";
+import { verifyAdminToken } from "../../middlewares/auth.middleware.js";
 
 const adminRoute = new Hono();
 

@@ -4,7 +4,7 @@ import {
   createServiceService,
   updateServiceService,
   deleteServiceService,
-} from "./services.service";
+} from "./services.service.js";
 
 export const getServices = async (c: Context) => {
   const data = await getServicesService();

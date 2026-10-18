@@ -1,5 +1,5 @@
-import { generateDailyBlogs } from "../services/blogGenerator";
-import { logError } from "../lib/errorLog";
+import { generateDailyBlogs } from "../services/blogGenerator.js";
+import { logError } from "../lib/errorLog.js";
 
 /**
  * src/jobs/blogGenerationCron.ts

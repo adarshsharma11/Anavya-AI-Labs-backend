@@ -1,7 +1,7 @@
-import app from './app'
-import { validateProductionEnv } from './lib/validateEnv'
-import { scheduleBlogGeneration } from './jobs/blogGenerationCron'
-import { env } from './config/env'
+import app from './app.js'
+import { validateProductionEnv } from './lib/validateEnv.js'
+import { scheduleBlogGeneration } from './jobs/blogGenerationCron.js'
+import { env } from './config/env.js'
 
 const isVercel = process.env.VERCEL === '1'
 

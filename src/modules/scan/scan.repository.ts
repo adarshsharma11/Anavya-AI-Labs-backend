@@ -1,5 +1,5 @@
-import { db } from "../../db/db";
-import { scans } from "../../db/schema/scan";
+import { db } from "../../db/db.js";
+import { scans } from "../../db/schema/scan.js";
 import { eq } from "drizzle-orm";
 
 export const createScanRepo = async (data: any) => {

@@ -1,5 +1,5 @@
 import Razorpay from "razorpay";
-import { env } from "../config/env";
+import { env } from "../config/env.js";
 
 let client: InstanceType<typeof Razorpay> | null = null;
 

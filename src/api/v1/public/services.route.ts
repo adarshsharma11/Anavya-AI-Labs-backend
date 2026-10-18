@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getServices, createService, updateService, deleteService } from "../../../modules/services/services.controller";
-import { verifyAdminToken } from "../../../middlewares/auth.middleware";
+import { getServices, createService, updateService, deleteService } from "../../../modules/services/services.controller.js";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware.js";
 
 const app = new Hono();
 

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { runGeoCheck } from "../../../modules/geo/geo.controller";
+import { runGeoCheck } from "../../../modules/geo/geo.controller.js";
 
 const geoRoute = new Hono();
 

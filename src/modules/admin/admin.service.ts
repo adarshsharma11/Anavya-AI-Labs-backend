@@ -1,6 +1,6 @@
-import { db } from "../../db/db";
-import { users } from "../../db/schema/user";
-import { scans } from "../../db/schema/scan";
+import { db } from "../../db/db.js";
+import { users } from "../../db/schema/user.js";
+import { scans } from "../../db/schema/scan.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export const getAdminAnalyticsService = async () => {

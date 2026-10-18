@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import {
   getPublicPlans,
   getSinglePlan,
-} from "../../../modules/pricing/pricing.controller";
+} from "../../../modules/pricing/pricing.controller.js";
 
 const pricingRoute = new Hono();
 

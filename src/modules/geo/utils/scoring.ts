@@ -1,11 +1,11 @@
-import type { RobotsResult } from "../services/robotsCheck";
-import type { LlmsTxtResult } from "../services/llmsTxtCheck";
-import type { SitemapResult } from "../services/sitemapCheck";
-import type { SchemaResult } from "../services/schemaCheck";
-import type { ContentStructureResult } from "../services/contentStructure";
-import type { ReadabilityResult } from "../services/readabilityCheck";
-import type { MetadataCheckResult } from "../services/metadataCheck";
-import type { TechnicalResult } from "../services/technicalCheck";
+import type { RobotsResult } from "../services/robotsCheck.js";
+import type { LlmsTxtResult } from "../services/llmsTxtCheck.js";
+import type { SitemapResult } from "../services/sitemapCheck.js";
+import type { SchemaResult } from "../services/schemaCheck.js";
+import type { ContentStructureResult } from "../services/contentStructure.js";
+import type { ReadabilityResult } from "../services/readabilityCheck.js";
+import type { MetadataCheckResult } from "../services/metadataCheck.js";
+import type { TechnicalResult } from "../services/technicalCheck.js";
 
 export interface GeoRecommendation {
   title: string;

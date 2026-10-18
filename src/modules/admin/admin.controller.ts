@@ -4,7 +4,7 @@ import {
   getAdminUsersService,
   deleteUserService,
   getAdminScansService,
-} from "./admin.service";
+} from "./admin.service.js";
 
 export const getAdminAnalytics = async (c: Context) => {
   try {

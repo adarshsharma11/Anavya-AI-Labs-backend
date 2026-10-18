@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { getProfile, updateProfile, getScans, getAnalytics } from '../../modules/dashboard/dashboard.controller';
-import { verifyToken } from '../../middlewares/auth.middleware';
+import { getProfile, updateProfile, getScans, getAnalytics } from '../../modules/dashboard/dashboard.controller.js';
+import { verifyToken } from '../../middlewares/auth.middleware.js';
 
 const dashboardRoute = new Hono();
 

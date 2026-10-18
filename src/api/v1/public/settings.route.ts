@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { getSettings, updateSetting } from "../../../modules/settings/settings.controller";
+import { getSettings, updateSetting } from "../../../modules/settings/settings.controller.js";
 
-import { verifyToken } from "../../../middlewares/auth.middleware";
+import { verifyToken } from "../../../middlewares/auth.middleware.js";
 
 const app = new Hono();
 

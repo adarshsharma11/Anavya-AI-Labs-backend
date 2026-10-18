@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getPage, createPage, updatePage } from "../../../modules/pages/pages.controller";
+import { getPage, createPage, updatePage } from "../../../modules/pages/pages.controller.js";
 
 const app = new Hono();
 

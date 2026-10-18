@@ -4,7 +4,7 @@ import {
   getQuote,
   verifyPayment,
   razorpayWebhook,
-} from "../../../modules/payment/payment.controller";
+} from "../../../modules/payment/payment.controller.js";
 
 const app = new Hono();
 

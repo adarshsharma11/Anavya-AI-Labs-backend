@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { getSiteSettingsService, updateSettingService } from "./settings.service";
+import { getSiteSettingsService, updateSettingService } from "./settings.service.js";
 
 export const getSettings = async (c: Context) => {
   try {

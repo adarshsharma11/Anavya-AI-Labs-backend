@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../db/db";
-import { portfolio } from "../../db/schema/portfolio";
+import { db } from "../../db/db.js";
+import { portfolio } from "../../db/schema/portfolio.js";
 
 export const getPortfolioRepo = async () => {
   return await db.select().from(portfolio).orderBy(portfolio.createdAt);
