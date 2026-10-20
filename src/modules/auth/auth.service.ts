@@ -1,5 +1,6 @@
 import * as authRepo from './auth.repository.js';
 import { sendOTP } from '../../lib/sendOTP.js';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
@@ -7,14 +8,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "super_secret_anavya";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "super_secret_refresh_anavya";
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-
-const hashPassword = async (password: string) => {
-  return await Bun.password.hash(password);
-};
-
-const verifyPassword = async (password: string, hash: string) => {
-  return await Bun.password.verify(password, hash);
-};
 
 export const signupService = async (data: any) => {
   const { email, password, name, username, phoneNumber } = data;
