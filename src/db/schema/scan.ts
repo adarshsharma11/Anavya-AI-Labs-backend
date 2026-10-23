@@ -1,7 +1,8 @@
-import { pgTable, serial, text, boolean, timestamp, json, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, json, integer, uuid } from "drizzle-orm/pg-core";
 
 export const scans = pgTable("scans", {
   id: serial("id").primaryKey(),
+  publicId: uuid("public_id").defaultRandom().notNull().unique(),
 
   url: text("url").notNull(),
   normalizedUrl: text("normalized_url"),
@@ -14,6 +15,7 @@ export const scans = pgTable("scans", {
   competitorAnalysis: json("competitor_analysis").$type<any>().default(null),
 
   fullReport: json("full_report").$type<any>().default(null),
+  reportStartedAt: timestamp("report_started_at"),
 
   isUnlocked: boolean("is_unlocked").default(false),
 

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { safeRedirects } from "../../../lib/safeUrl.js";
 
 export interface SitemapResult {
   present: boolean;
@@ -10,6 +11,7 @@ export async function checkSitemap(baseUrl: string): Promise<SitemapResult> {
 
   try {
     const response = await axios.get(sitemapUrl, {
+      ...safeRedirects,
       timeout: 5000,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",

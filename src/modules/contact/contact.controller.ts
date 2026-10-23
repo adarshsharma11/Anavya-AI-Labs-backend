@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { createContactService, getContactsService, updateContactService, deleteContactService } from "./contact.service.js";
 import { checkRateLimit } from "../../lib/rateLimiter.js";
+import { getClientIp } from "../../lib/request.js";
 
 export const submitContactForm = async (c: Context) => {
   try {
@@ -12,10 +13,10 @@ export const submitContactForm = async (c: Context) => {
       return c.json({ success: false, message: "All fields are required" }, 400);
     }
 
-    const ip = c.req.header("x-forwarded-for") || "local";
+    const ip = getClientIp(c);
 
     // Rate limiting to prevent spam
-    if (!checkRateLimit(ip)) {
+    if (!(await checkRateLimit(`contact:${ip}`))) {
       return c.json(
         {
           success: false,

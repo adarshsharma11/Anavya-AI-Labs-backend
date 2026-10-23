@@ -1,92 +1,113 @@
 import type { Context } from "hono";
-import { createScanService, getScanService } from "./scan.service.js";
+import {
+  createScanService,
+  findAccessibleScan,
+  getScanService,
+  ScanNotFoundError,
+} from "./scan.service.js";
 import { checkRateLimit, checkDailyScanLimit } from "../../lib/rateLimiter.js";
+import { assertPublicUrl, UnsafeUrlError } from "../../lib/safeUrl.js";
+import { getClientIp, normalizeEmail } from "../../lib/request.js";
+import { getUserPlanLimits } from "../subscription/subscription.service.js";
+import { getProfileService } from "../dashboard/dashboard.service.js";
+import { logError } from "../../lib/errorLog.js";
 
 export const createScan = async (c: Context) => {
   try {
     const body = await c.req.json();
-    const { url, competitorUrl } = body;
+    const ip = getClientIp(c);
+    const user = c.get("user") as { id: number; email: string } | undefined;
 
-    if (!url) throw new Error("URL required");
+    const url = await assertPublicUrl(body.url);
+    const competitorUrl = body.competitorUrl ? await assertPublicUrl(body.competitorUrl) : null;
 
-    const ip =
-      c.req.header("x-forwarded-for") ||
-      "local";
-
-    // 10 per minute (existing)
-    if (!checkRateLimit(ip)) {
-      return c.json({
-        success: false,
-        message: "Too many requests. Please wait a minute.",
-      }, 429);
+    if (!(await checkRateLimit(`scan:${ip}`))) {
+      return c.json({ success: false, message: "Too many requests. Please wait a minute." }, 429);
     }
 
-    // 5 per day (new)
-    if (!checkDailyScanLimit(ip)) {
-      return c.json({
-        success: false,
-        message: "Rate limit: 5 scans per day",
-      }, 429);
+    const limits = await getUserPlanLimits(user?.id);
+    if (limits.dailyScanLimit !== null) {
+      const limitKey = user ? `user:${user.id}` : `ip:${ip}`;
+      if (!(await checkDailyScanLimit(limitKey, limits.dailyScanLimit))) {
+        return c.json(
+          {
+            success: false,
+            code: "DAILY_LIMIT",
+            message: `Free plan limit reached: ${limits.dailyScanLimit} scans per day. Upgrade to Pro for unlimited scans.`,
+          },
+          429,
+        );
+      }
     }
 
-    const user = c.get("user");
-    const scanId = await createScanService(url, ip, competitorUrl, user?.id);
+    const scan = await createScanService({
+      url,
+      ip,
+      competitorUrl,
+      userId: user?.id,
+      email: normalizeEmail(body.email) ?? user?.email ?? null,
+      autoUnlock: limits.isPro,
+    });
 
     return c.json({
       success: true,
-      scanId,
+      scanId: scan.publicId,
+      publicId: scan.publicId,
+      unlocked: limits.isPro,
     });
   } catch (e: any) {
+    if (!(e instanceof UnsafeUrlError)) logError("CREATE_SCAN", e);
     return c.json({ success: false, message: e.message }, 400);
   }
 };
 
 export const getScan = async (c: Context) => {
   try {
-    const id = Number(c.req.param("id"));
-    const data = await getScanService(id);
-
+    const data = await getScanService(c.req.param("id") ?? "", c.get("user"));
     return c.json({ success: true, data });
   } catch (e: any) {
-    return c.json({ success: false, message: e.message }, 404);
+    const status = e instanceof ScanNotFoundError ? 404 : 500;
+    return c.json({ success: false, message: e.message }, status);
   }
 };
 
-import { getProfileService } from "../dashboard/dashboard.service.js";
-
 export const getScanPdf = async (c: Context) => {
   try {
-    const { generatePdfReport } = await import("../../lib/pdfGenerator.js");
-    const id = Number(c.req.param("id"));
-    const scanData = await getScanService(id);
-    
-    let companyName = "Anavya AI Labs";
-    let companyLogoUrl = "";
-    
-    // Attempt to pull user's saved branding if requested
-    const user = c.get("user");
-    if (user) {
-      try {
-        const profile = await getProfileService(user.id);
-        if (profile.companyName) companyName = profile.companyName;
-        if (profile.companyLogoUrl) companyLogoUrl = profile.companyLogoUrl;
-      } catch (e) {}
-    }
-    
-    // Override with query params if provided dynamically
-    const qName = c.req.query("companyName");
-    const qLogo = c.req.query("companyLogoUrl");
-    if (qName) companyName = qName;
-    if (qLogo) companyLogoUrl = qLogo;
+    const ref = c.req.param("id") ?? "";
+    const { scan, fullAccess } = await findAccessibleScan(ref, c.get("user"));
 
-    const pdfBuffer = await generatePdfReport(scanData, companyName, companyLogoUrl);
-    
+    if (!scan.isUnlocked || !fullAccess) {
+      return c.json(
+        { success: false, code: "PAYMENT_REQUIRED", message: "Unlock the full report to download the PDF." },
+        402,
+      );
+    }
+    if (!scan.fullReport) {
+      return c.json(
+        { success: false, code: "REPORT_PENDING", message: "Your report is still being generated. Try again in a minute." },
+        409,
+      );
+    }
+
+    const branding: { companyName?: string; companyLogoUrl?: string } = {};
+    const user = c.get("user") as { id: number } | undefined;
+    if (user && (await getUserPlanLimits(user.id)).isPro) {
+      const profile = await getProfileService(user.id).catch(() => null);
+      branding.companyName = c.req.query("companyName") || profile?.companyName || undefined;
+      branding.companyLogoUrl = c.req.query("companyLogoUrl") || profile?.companyLogoUrl || undefined;
+    }
+
+    const { generatePdfReport } = await import("../../lib/pdfGenerator.js");
+    const pdfBuffer = await generatePdfReport(scan, branding);
+
     c.header("Content-Type", "application/pdf");
-    c.header("Content-Disposition", `attachment; filename="report-${id}.pdf"`);
-    
-    // Buffer acts as response body
-    return new Response(pdfBuffer);
+    c.header("Content-Disposition", `attachment; filename="report-${scan.publicId}.pdf"`);
+    return c.body(new Uint8Array(pdfBuffer));
   } catch (e: any) {
+    if (e instanceof ScanNotFoundError) {
+      return c.json({ success: false, message: e.message }, 404);
+    }
+    logError("SCAN_PDF", e);
     return c.json({ success: false, message: "Failed to generate PDF: " + e.message }, 500);
   }
 };

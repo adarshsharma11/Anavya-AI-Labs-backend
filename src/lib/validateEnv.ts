@@ -16,7 +16,8 @@ export function validateProductionEnv(): { valid: boolean; errors: string[] } {
     "OPENAI_API_KEY",
     "DATABASE_URL",
     "JWT_SECRET",
-    "JWT_REFRESH_SECRET",
+    "ADMIN_API_KEY",
+    "CRON_SECRET",
   ];
 
   const errors: string[] = [];

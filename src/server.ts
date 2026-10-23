@@ -5,14 +5,14 @@ import { env } from './config/env.js'
 
 const isVercel = process.env.VERCEL === '1'
 
-if (!isVercel) {
-  const envCheck = validateProductionEnv();
-  if (!envCheck.valid) {
-    console.error("Production env invalid:");
-    envCheck.errors.forEach(err => console.error(`  - ${err}`));
-    process.exit(1);
-  }
+const envCheck = validateProductionEnv();
+if (!envCheck.valid) {
+  console.error("Production env invalid:");
+  envCheck.errors.forEach(err => console.error(`  - ${err}`));
+  if (!isVercel) process.exit(1);
+}
 
+if (!isVercel) {
   if (process.env.NODE_ENV === "production") {
     scheduleBlogGeneration();
   }

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun run src/server.ts",
     "start": "NODE_ENV=production bun run src/server.ts",
-    "seed": "bun run src/db/seed/index.ts"
+    "seed": "bun run src/db/seed/index.ts",
+    "migrate": "bun run src/db/migrate.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -21,6 +22,7 @@
     "@sparticuz/chromium": "^147.0.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^8.0.0",
+    "@vercel/functions": "^3.10.3",
     "axios": "^1.13.5",
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",

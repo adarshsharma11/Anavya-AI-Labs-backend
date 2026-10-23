@@ -1,7 +1,9 @@
 import { db } from "../../db/db.js";
 import { users } from "../../db/schema/user.js";
 import { scans } from "../../db/schema/scan.js";
+import { payments } from "../../db/schema/payments.js";
 import { eq, desc, sql } from "drizzle-orm";
+import { STUCK_REPORT_MINUTES } from "../scan/scan.repository.js";
 
 export const getAdminAnalyticsService = async () => {
   const [userCountResult] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
@@ -70,6 +72,7 @@ export const deleteUserService = async (userId: number) => {
 export const getAdminScansService = async () => {
   return await db.select({
     id: scans.id,
+    publicId: scans.publicId,
     url: scans.url,
     competitorUrl: scans.competitorUrl,
     status: scans.status,
@@ -84,4 +87,63 @@ export const getAdminScansService = async () => {
   .from(scans)
   .leftJoin(users, eq(scans.userId, users.id))
   .orderBy(desc(scans.createdAt));
+};
+
+export const getAdminRevenueService = async () => {
+  const totals = await db.execute(sql`
+    SELECT type, currency,
+      COUNT(*)::int AS "count",
+      COALESCE(SUM(amount_subunits), 0)::bigint AS "amountSubunits",
+      COALESCE(SUM(amount_subunits) FILTER (WHERE created_at >= now() - interval '30 days'), 0)::bigint AS "last30DaysSubunits"
+    FROM payments
+    WHERE status = 'captured'
+    GROUP BY type, currency
+    ORDER BY type, currency
+  `);
+
+  const scanStats = await db.execute(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE is_unlocked)::int AS "paidScans",
+      COUNT(*) FILTER (WHERE is_unlocked AND full_report IS NOT NULL)::int AS "deliveredReports",
+      COUNT(*) FILTER (
+        WHERE is_unlocked AND full_report IS NULL
+          AND (status <> 'generating_full_report'
+            OR report_started_at < now() - (${STUCK_REPORT_MINUTES} * interval '1 minute'))
+      )::int AS "stuckReports",
+      COUNT(*) FILTER (WHERE status = 'report_failed')::int AS "failedReports"
+    FROM scans
+  `);
+
+  const subs = await db.execute(sql`
+    SELECT COUNT(*) FILTER (WHERE status IN ('active', 'cancel_scheduled'))::int AS "activeSubscriptions",
+      COUNT(*) FILTER (WHERE status = 'past_due')::int AS "pastDueSubscriptions"
+    FROM subscriptions
+  `);
+
+  const recentPayments = await db
+    .select({
+      id: payments.id,
+      type: payments.type,
+      scanId: payments.scanId,
+      userId: payments.userId,
+      amountSubunits: payments.amountSubunits,
+      currency: payments.currency,
+      status: payments.status,
+      razorpayPaymentId: payments.razorpayPaymentId,
+      createdAt: payments.createdAt,
+    })
+    .from(payments)
+    .orderBy(desc(payments.createdAt))
+    .limit(25);
+
+  return {
+    totals: totals.rows.map((row: any) => ({
+      ...row,
+      amountSubunits: Number(row.amountSubunits),
+      last30DaysSubunits: Number(row.last30DaysSubunits),
+    })),
+    scans: scanStats.rows[0] ?? {},
+    subscriptions: subs.rows[0] ?? {},
+    recentPayments,
+  };
 };

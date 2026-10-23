@@ -4,7 +4,10 @@ import {
   getAdminUsersService,
   deleteUserService,
   getAdminScansService,
+  getAdminRevenueService,
 } from "./admin.service.js";
+import { getScanRepo, updateScanRepo } from "../scan/scan.repository.js";
+import { generateAndStoreReport } from "../scan/scan.service.js";
 
 export const getAdminAnalytics = async (c: Context) => {
   try {
@@ -38,6 +41,31 @@ export const getAdminScans = async (c: Context) => {
   try {
     const data = await getAdminScansService();
     return c.json({ success: true, data });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+};
+
+export const getAdminRevenue = async (c: Context) => {
+  try {
+    const data = await getAdminRevenueService();
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+};
+
+export const regenerateScanReport = async (c: Context) => {
+  try {
+    const scan = await getScanRepo(Number(c.req.param("id")));
+    if (!scan) return c.json({ success: false, message: "Scan not found" }, 404);
+    if (!scan.isUnlocked) return c.json({ success: false, message: "Scan is not paid" }, 400);
+
+    await updateScanRepo(scan.id, { fullReport: null, status: "paid", reportStartedAt: null });
+    await generateAndStoreReport(scan.id);
+
+    const updated = await getScanRepo(scan.id);
+    return c.json({ success: true, data: { id: scan.id, status: updated?.status } });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
   }

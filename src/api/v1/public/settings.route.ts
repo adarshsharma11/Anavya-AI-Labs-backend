@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getSettings, updateSetting } from "../../../modules/settings/settings.controller.js";
 
-import { verifyToken } from "../../../middlewares/auth.middleware.js";
+import { verifyAdminToken } from "../../../middlewares/auth.middleware.js";
 
 const app = new Hono();
 
@@ -9,6 +9,6 @@ const app = new Hono();
 app.get("/settings", getSettings);
 
 // admin update
-app.post("/settings", verifyToken, updateSetting);
+app.post("/settings", verifyAdminToken, updateSetting);
 
 export default app;

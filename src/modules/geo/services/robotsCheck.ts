@@ -1,4 +1,5 @@
 import axios from "axios";
+import { safeRedirects } from "../../../lib/safeUrl.js";
 
 export interface RobotsResult {
   allowedBots: string[];
@@ -23,6 +24,7 @@ export async function checkRobots(baseUrl: string): Promise<RobotsResult> {
 
   try {
     const response = await axios.get(robotsUrl, {
+      ...safeRedirects,
       timeout: 5000,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",

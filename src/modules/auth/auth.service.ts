@@ -4,8 +4,7 @@ import { hashPassword, verifyPassword } from '../../lib/password.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || "super_secret_anavya";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "super_secret_refresh_anavya";
+import { getJwtSecret, isProduction } from "../../lib/secrets.js";
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -45,7 +44,7 @@ export const loginService = async (data: any) => {
   if (!isValid) throw new Error("Invalid credentials");
 
   // Tokens
-  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, getJwtSecret(), { expiresIn: '1h' });
 
   // Refresh token
   const refreshTokenString = crypto.randomBytes(40).toString('hex');
@@ -77,7 +76,7 @@ export const refreshTokenService = async (token: string) => {
   const user = await authRepo.getUserById(rt.userId);
   if (!user) throw new Error("User associated with token not found");
 
-  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, getJwtSecret(), { expiresIn: '1h' });
 
   // Roll refresh token for extra security
   const newRefreshToken = crypto.randomBytes(40).toString('hex');
@@ -105,19 +104,15 @@ export const forgotPasswordService = async (email: string) => {
 
   await authRepo.createOtpRepo({ email, otp: otpCode, type: "reset_password", expiresAt });
   
-  const devMode = !process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === "your_sendgrid_api_key_here";
-  
-  if (!devMode) {
-    try {
-      await sendOTP(email, otpCode, "reset");
-    } catch (e) {
-      console.warn("Failed to send OTP via SendGrid", e);
-      return { success: true, message: "Failed to send email, but OTP generated.", mockEmailDelivery: true, otp: otpCode };
-    }
-    return { success: true, message: "Password reset OTP sent to your email." };
-  } else {
-    return { success: true, message: "Password reset OTP generated.", mockEmailDelivery: true, otp: otpCode };
+  const emailConfigured = Boolean(process.env.SENDGRID_API_KEY) && process.env.SENDGRID_API_KEY !== "your_sendgrid_api_key_here";
+  const sent = emailConfigured ? await sendOTP(email, otpCode, "reset").catch(() => false) : false;
+
+  if (isProduction()) {
+    if (!sent) throw new Error("Could not send the reset email. Please try again shortly.");
+    return { success: true, message: "If that email exists, a reset link was sent." };
   }
+
+  return { success: true, message: "Password reset OTP generated (development).", mockEmailDelivery: !sent, otp: otpCode };
 };
 
 export const resetPasswordService = async (data: any) => {

@@ -1,6 +1,8 @@
 import {
   getBlogsRepo,
+  getAllBlogsRepo,
   getBlogBySlugRepo,
+  getPublishedBlogBySlugRepo,
   createBlogRepo,
   updateBlogRepo,
   deleteBlogRepo,
@@ -8,6 +10,14 @@ import {
 
 export const getBlogsService = async () => {
   return await getBlogsRepo();
+};
+
+export const getAllBlogsService = async () => {
+  return await getAllBlogsRepo();
+};
+
+export const getPublishedBlogBySlugService = async (slug: string) => {
+  return await getPublishedBlogBySlugRepo(slug);
 };
 
 export const getBlogBySlugService = async (slug: string) => {

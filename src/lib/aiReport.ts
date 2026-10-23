@@ -37,6 +37,7 @@ Field guidance:
 - seoImprovements: 6–10 actionable items. Each item should be specific and testable (what to change + where + why).
 - performanceImprovements: 6–10 actionable items. Focus on impact first. Mention concrete tactics (image formats/compression, caching, script deferral, third-party scripts).
 - businessGrowthSuggestions: 6–10 actionable items. Focus on lead-gen/CRO, messaging, trust, and retention. Tie each suggestion to a measurable KPI.
+- geoImprovements: 5–8 actionable items to get cited by ChatGPT, Perplexity, Gemini and Google AI Overviews. Ground them in preview.geo (AI crawler access in robots.txt, llms.txt, schema types, answer-first content structure, FAQ blocks, readability, metadata). If preview.geo is missing, base them on the SEO data.
 - estimatedTrafficImpact: a realistic range based on the data (e.g., Low/Medium/High + % range) and what drives it.
 - competitorStrategy:
   - If no competitor data is provided, set competitorStrategy to null.
@@ -56,6 +57,7 @@ const ReportSchema = z.object({
   seoImprovements: z.array(z.string()),
   performanceImprovements: z.array(z.string()),
   businessGrowthSuggestions: z.array(z.string()),
+  geoImprovements: z.array(z.string()),
   competitorStrategy: z.string().nullable(),
   estimatedTrafficImpact: z.string(),
 });
@@ -69,6 +71,7 @@ export function buildDegradedReport(reason: string): any {
     seoImprovements: ["Review your meta titles and descriptions for consistency.", "Ensure all images have descriptive ALT text.", "Verify your robots.txt and sitemap.xml are correctly linked."],
     performanceImprovements: ["Optimize large images to reduce page weight.", "Enable browser caching for static assets.", "Minimize the number of third-party scripts."],
     businessGrowthSuggestions: ["Optimize your primary call-to-action (CTA) for better conversions.", "Add trust signals like testimonials or partner logos.", "Ensure your value proposition is clear above the fold."],
+    geoImprovements: ["Allow GPTBot, PerplexityBot and Google-Extended in robots.txt.", "Publish an llms.txt file that summarizes your key pages.", "Add Organization and FAQPage schema to your main pages.", "Open each key page with a direct 2–3 sentence answer to the main question."],
     competitorStrategy: "Competitor deep-dive strategy currently unavailable. Please check back later or contact support if this persists.",
     estimatedTrafficImpact: "Potential for 15-30% traffic growth with standard optimizations.",
     error: reason

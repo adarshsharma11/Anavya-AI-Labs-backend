@@ -2,6 +2,8 @@ import type { Context } from "hono";
 import {
   getBlogsService,
   getBlogBySlugService,
+  getPublishedBlogBySlugService,
+  getAllBlogsService,
   createBlogService,
   updateBlogService,
   deleteBlogService,
@@ -26,7 +28,7 @@ export const getBlogBySlug = async (c: Context) => {
     if (!slug) {
       return c.json({ success: false, message: "Slug parameter is required" }, 400);
     }
-    const data = await getBlogBySlugService(slug);
+    const data = await getPublishedBlogBySlugService(slug);
     
     if (!data) {
       // Fallback to seed data only if the database is currently empty
@@ -40,6 +42,15 @@ export const getBlogBySlug = async (c: Context) => {
       return c.json({ success: false, message: "Blog not found" }, 404);
     }
     
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
+  }
+};
+
+export const getAdminBlogs = async (c: Context) => {
+  try {
+    const data = await getAllBlogsService();
     return c.json({ success: true, data });
   } catch (error: any) {
     return c.json({ success: false, message: error.message }, 500);
@@ -78,13 +89,7 @@ export const createBlog = async (c: Context) => {
     console.error("CREATE BLOG ERROR:", error);
 
     return c.json(
-      {
-        success: false,
-        message: error?.message,
-        detail: error?.detail,
-        stack: error?.stack,
-        error,
-      },
+      { success: false, message: error?.message, detail: error?.detail },
       500
     );
   }

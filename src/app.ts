@@ -14,6 +14,7 @@ import portfolioRoute from './api/v1/public/portfolio.route.js'
 import aboutRoute from './api/v1/public/about.route.js'
 import adminRoute from './api/v1/admin.route.js'
 import geoRoute from './api/v1/public/geo.route.js'
+import cronRoute from './api/cron.route.js'
 
 
 import { env } from './config/env.js'
@@ -70,6 +71,7 @@ app.route(apiPrefix, contactRoute)
 app.route(apiPrefix, portfolioRoute)
 app.route(apiPrefix, aboutRoute)
 app.route(apiPrefix, adminRoute)
+app.route('/api/cron', cronRoute)
 
 
 export default app

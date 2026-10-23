@@ -1,9 +1,22 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../db/db.js";
 import { blogs } from "../../db/schema/blogs.js";
 
 export const getBlogsRepo = async () => {
-  return await db.select().from(blogs).orderBy(blogs.createdAt);
+  return await db.select().from(blogs).where(eq(blogs.status, "published")).orderBy(blogs.createdAt);
+};
+
+export const getAllBlogsRepo = async () => {
+  return await db.select().from(blogs).orderBy(desc(blogs.createdAt));
+};
+
+export const getPublishedBlogBySlugRepo = async (slug: string) => {
+  const res = await db
+    .select()
+    .from(blogs)
+    .where(and(eq(blogs.slug, slug), eq(blogs.status, "published")))
+    .limit(1);
+  return res[0];
 };
 
 export const getBlogBySlugRepo = async (slug: string) => {

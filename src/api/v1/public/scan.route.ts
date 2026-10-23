@@ -6,9 +6,7 @@ import { optionalVerifyToken } from "../../../middlewares/auth.middleware.js";
 const scanRoute = new Hono();
 
 scanRoute.post("/scan/create", optionalVerifyToken, createScan);
-scanRoute.get("/scan/:id", getScan);
-
-// Optional auth for PDF (to fetch saved branding)
+scanRoute.get("/scan/:id", optionalVerifyToken, getScan);
 scanRoute.get("/scan/:id/pdf", optionalVerifyToken, getScanPdf);
 
 

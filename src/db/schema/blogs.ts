@@ -19,6 +19,7 @@ export const blogs = pgTable("blogs", {
 
   tags: json("tags").$type<string[]>().notNull(),
   content: text("content").notNull(),
+  status: text("status").notNull().default("published"), // draft | published
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

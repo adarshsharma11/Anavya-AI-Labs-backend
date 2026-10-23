@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = (process.env.JWT_SECRET as string) || "super_secret_anavya";
+import { getAdminApiKey, getJwtSecret } from "../lib/secrets.js";
 
 export const verifyToken = async (c: Context, next: Next) => {
   const authHeader = c.req.header("Authorization");
@@ -14,7 +14,7 @@ export const verifyToken = async (c: Context, next: Next) => {
     return c.json({ success: false, message: "Unauthorized. Token missing." }, 401);
   }
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: number; email: string };
+    const decoded = jwt.verify(token, getJwtSecret()) as unknown as { id: number; email: string };
     c.set("user", decoded);
     await next();
   } catch (err: any) {
@@ -30,7 +30,7 @@ export const optionalVerifyToken = async (c: Context, next: Next) => {
     const token = authHeader.split(" ")[1];
     if (token) {
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: number; email: string };
+        const decoded = jwt.verify(token, getJwtSecret()) as unknown as { id: number; email: string };
         c.set("user", decoded);
       } catch (err) {
         // Silently fail for optional auth
@@ -42,9 +42,7 @@ export const optionalVerifyToken = async (c: Context, next: Next) => {
 
 export const verifyAdmin = async (c: Context, next: Next) => {
   const adminKey = c.req.header("x-admin-key");
-  const { env } = await import("../config/env.js");
-
-  if (!adminKey || adminKey !== env.ADMIN_API_KEY) {
+  if (!adminKey || adminKey !== getAdminApiKey()) {
     return c.json({ success: false, message: "Unauthorized. Admin access required." }, 401);
   }
 

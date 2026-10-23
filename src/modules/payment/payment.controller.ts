@@ -1,10 +1,16 @@
 import type { Context } from "hono";
 import crypto from "crypto";
 import { getRazorpay } from "../../lib/razorPay.js";
-import { getScanRepo, updateScanRepo } from "../scan/scan.repository.js";
-import { generateFullReport } from "../../lib/aiReport.js";
-import { sendReportReadyEmail } from "../../lib/sendOTP.js";
-import { getUserById } from "../auth/auth.repository.js";
+import { getScanRepo, updateScanRepo, type ScanRow } from "../scan/scan.repository.js";
+import {
+  findAccessibleScan,
+  generateAndStoreReport,
+  ScanNotFoundError,
+} from "../scan/scan.service.js";
+import { recordPaymentRepo } from "./payment.repository.js";
+import { handleSubscriptionWebhook } from "../subscription/subscription.service.js";
+import { runInBackground } from "../../lib/background.js";
+import { normalizeEmail } from "../../lib/request.js";
 
 import { logError } from "../../lib/errorLog.js";
 import { env } from "../../config/env.js";
@@ -44,68 +50,44 @@ function resolveRegion(
   return "INTL";
 }
 
-const unlockScan = async (scanId: number) => {
-  const scan = await getScanRepo(scanId);
-  if (!scan) {
-    return { ok: false as const, reason: "Scan not found" };
-  }
-
+const unlockScan = async (scan: ScanRow) => {
   if (!scan.isUnlocked) {
-    await updateScanRepo(scanId, {
+    await updateScanRepo(scan.id, {
       isUnlocked: true,
-      status: scan.status === "completed" ? scan.status : "paid",
+      status: scan.fullReport ? "completed" : "paid",
     });
   }
-
-  return { ok: true as const };
 };
 
-const unlockAndGenerateReport = async (scanId: number) => {
-  const scan = await getScanRepo(scanId);
-  if (!scan) {
-    logError("UNLOCK_REPORT", new Error("Scan not found"), { scanId });
-    return { ok: false as const, reason: "Scan not found" };
-  }
+const recordReportPayment = async (scan: ScanRow, payment: {
+  orderId?: string | null;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  status: string;
+}) => {
+  await recordPaymentRepo({
+    type: "report",
+    scanId: scan.id,
+    userId: scan.userId,
+    razorpayOrderId: payment.orderId ?? null,
+    razorpayPaymentId: payment.paymentId,
+    amountSubunits: payment.amount,
+    currency: payment.currency.toUpperCase(),
+    status: payment.status,
+  });
+};
 
-  await unlockScan(scanId);
-
-  if (!scan.preview || scan.fullReport) {
-    return { ok: true as const };
-  }
-
-  await updateScanRepo(scanId, { status: "generating_full_report" });
-
-  try {
-    const fullReport = await generateFullReport(scan.url, scan.preview, {
-      url: scan.competitorUrl,
-      preview: scan.competitorPreview,
-      analysis: scan.competitorAnalysis,
-    });
-
-    await updateScanRepo(scanId, { fullReport, status: "completed" });
-
-    let targetEmail = scan.userEmail;
-    if (!targetEmail && scan.userId) {
-      const user = await getUserById(scan.userId);
-      if (user) targetEmail = user.email;
-    }
-
-    if (targetEmail) {
-      await sendReportReadyEmail(targetEmail, scan.id, scan.url);
-    }
-
-    return { ok: true as const };
-  } catch (err: any) {
-    logError("AI_REPORT_GENERATION", err, { scanId, url: scan.url });
-    await updateScanRepo(scanId, { status: "completed" });
-    return { ok: false as const, reason: err?.message || "Report generation failed" };
-  }
+const fulfillReportPayment = async (scan: ScanRow, payment: Parameters<typeof recordReportPayment>[1]) => {
+  await recordReportPayment(scan, payment);
+  await unlockScan(scan);
+  runInBackground("AI_REPORT_GENERATION", generateAndStoreReport(scan.id));
 };
 
 export const getQuote = async (c: Context) => {
   try {
     const region = resolveRegion(c.req.query("region"), c);
-    const quote = getPaymentQuote(region);
+    const quote = await getPaymentQuote(region);
     return c.json({ success: true, data: quote });
   } catch (e: any) {
     return c.json({ success: false, message: e.message }, 500);
@@ -116,20 +98,53 @@ export const createOrder = async (c: Context) => {
   try {
     const body = await c.req.json();
     const { scanId, region: bodyRegion } = body;
+    const user = c.get("user") as { id: number; email: string } | undefined;
 
     if (!scanId) {
       return c.json({ success: false, message: "scanId is required" }, 400);
     }
 
+    let scan: ScanRow;
+    try {
+      ({ scan } = await findAccessibleScan(String(scanId), user));
+    } catch (err) {
+      if (err instanceof ScanNotFoundError) {
+        return c.json({ success: false, message: "Scan not found" }, 404);
+      }
+      throw err;
+    }
+
+    if (scan.isUnlocked) {
+      return c.json(
+        { success: false, code: "ALREADY_UNLOCKED", message: "This report is already unlocked", publicId: scan.publicId },
+        409,
+      );
+    }
+    if (!scan.preview) {
+      return c.json({ success: false, message: "Scan is still running. Try again shortly." }, 409);
+    }
+
+    const email = normalizeEmail(body.email) ?? scan.userEmail ?? user?.email ?? null;
+    if (!email) {
+      return c.json(
+        { success: false, code: "EMAIL_REQUIRED", message: "Enter your email so we can send your report." },
+        400,
+      );
+    }
+    if (email !== scan.userEmail) {
+      await updateScanRepo(scan.id, { userEmail: email });
+    }
+
     const region = resolveRegion(bodyRegion, c);
-    const quote = getPaymentQuote(region);
+    const quote = await getPaymentQuote(region);
 
     const order = await getRazorpay().orders.create({
       amount: quote.amountSubunits,
       currency: quote.currency,
-      receipt: `scan_${scanId}_${Date.now()}`,
+      receipt: `scan_${scan.id}_${Date.now()}`,
       notes: {
-        scanId: String(scanId),
+        scanId: String(scan.id),
+        publicId: scan.publicId,
         region: quote.region,
         total: String(quote.total),
         currency: quote.currency,
@@ -150,6 +165,8 @@ export const createOrder = async (c: Context) => {
       success: true,
       order,
       quote,
+      publicId: scan.publicId,
+      prefill: { email },
       key_id: env.RAZORPAY_KEY_ID,
     });
   } catch (e: any) {
@@ -206,27 +223,31 @@ export const verifyPayment = async (c: Context) => {
       return c.json({ success: false, message: "Invalid order amount" }, 400);
     }
 
-    const orderScanId = order.notes?.scanId;
-    if (!orderScanId || String(orderScanId) !== String(scanId)) {
+    const scan = await getScanRepo(Number(order.notes?.scanId));
+    const ref = String(scanId).toLowerCase();
+    if (!scan || (ref !== String(scan.id) && ref !== scan.publicId.toLowerCase())) {
       return c.json(
         { success: false, message: "Payment does not match this scan" },
         400,
       );
     }
 
-    const numericScanId = Number(scanId);
-    if (!Number.isFinite(numericScanId) || numericScanId <= 0) {
-      return c.json({ success: false, message: "Invalid scanId" }, 400);
-    }
+    await fulfillReportPayment(scan, {
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      amount: Number(order.amount),
+      currency: orderCurrency,
+      status: "captured",
+    });
 
-    const unlockResult = await unlockScan(numericScanId);
-    void unlockAndGenerateReport(numericScanId);
     return c.json({
       success: true,
       message: "Payment verified",
-      unlocked: unlockResult.ok,
+      unlocked: true,
+      publicId: scan.publicId,
     });
   } catch (e: any) {
+    logError("VERIFY_PAYMENT_FAILED", e);
     return c.json({ success: false, message: e.message }, 500);
   }
 };
@@ -257,6 +278,10 @@ export const razorpayWebhook = async (c: any) => {
 
     const event = JSON.parse(body);
 
+    if (String(event.event || "").startsWith("subscription.")) {
+      await handleSubscriptionWebhook(event.event, event.payload);
+    }
+
     if (event.event === "payment.captured") {
       const payment = event.payload?.payment?.entity;
       let scanId = payment?.notes?.scanId as string | undefined;
@@ -272,8 +297,15 @@ export const razorpayWebhook = async (c: any) => {
         }
       }
 
-      if (scanId) {
-        await unlockAndGenerateReport(Number(scanId));
+      const scan = scanId ? await getScanRepo(Number(scanId)) : undefined;
+      if (scan && payment?.id) {
+        await fulfillReportPayment(scan, {
+          orderId: payment.order_id,
+          paymentId: payment.id,
+          amount: Number(payment.amount) || 0,
+          currency: String(payment.currency || "INR"),
+          status: "captured",
+        });
       }
     }
 

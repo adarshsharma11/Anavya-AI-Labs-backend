@@ -1,12 +1,13 @@
 import type { Context } from 'hono';
 import * as authService from './auth.service.js';
 import { checkOtpRateLimit } from '../../lib/rateLimiter.js';
+import { getClientIp } from "../../lib/request.js";
 
 export const signup = async (c: Context) => {
   const body = await c.req.json();
   const { email } = body;
   
-  if (!checkOtpRateLimit(email || c.req.header('x-forwarded-for') || "unknown")) {
+  if (!(await checkOtpRateLimit(email || getClientIp(c)))) {
     return c.json({ success: false, message: "Too many OTP requests. Try again later." }, 429);
   }
 
@@ -24,7 +25,7 @@ export const login = async (c: Context) => {
   const body = await c.req.json();
   const { email } = body;
   
-  if (!checkOtpRateLimit(email || "unknown")) {
+  if (!(await checkOtpRateLimit(email || getClientIp(c)))) {
      return c.json({ success: false, message: "Too many login attempts." }, 429);
   }
 
@@ -50,7 +51,7 @@ export const forgotPassword = async (c: Context) => {
   const body = await c.req.json();
   const { email } = body;
   
-  if (!checkOtpRateLimit(email || "unknown")) {
+  if (!(await checkOtpRateLimit(email || getClientIp(c)))) {
     return c.json({ success: false, message: "Too many OTP requests." }, 429);
   }
 

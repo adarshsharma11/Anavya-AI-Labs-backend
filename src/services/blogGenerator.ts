@@ -15,7 +15,16 @@ const BLOG_TOPICS = [
   "The psychology of page speed: How 1 second costs millions"
 ];
 
-export async function generateDailyBlogs(count = 5) {
+const BLOG_IMAGES = [
+  "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80",
+];
+
+export async function generateDailyBlogs(count = 2) {
   if (!process.env.OPENAI_API_KEY) {
     logError("BLOG_GENERATOR", new Error("OPENAI_API_KEY is not set"));
     return [];
@@ -83,12 +92,13 @@ Maintain a helpful, authoritative tone.`;
         category: parsed.category || "SEO & Performance",
         date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: parsed.readTime,
-        image: `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000000)}?w=800&q=80`,
+        image: BLOG_IMAGES[Math.floor(Math.random() * BLOG_IMAGES.length)],
         authorName: "Anavya AI",
         authorRole: "Content Generation Engine",
         authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${finalSlug}`,
         tags: parsed.tags || [],
         content: contentStr,
+        status: "draft",
       });
       
       blogs.push(blog);
@@ -97,6 +107,6 @@ Maintain a helpful, authoritative tone.`;
     }
   }
   
-  console.log(`✓ Generated ${blogs.length} blogs`);
+  console.log(`✓ Generated ${blogs.length} draft blogs for review`);
   return blogs;
 }

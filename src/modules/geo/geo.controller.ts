@@ -1,119 +1,68 @@
 import type { Context } from "hono";
-import axios from "axios";
-import * as cheerio from "cheerio";
+import { desc } from "drizzle-orm";
 
-import { checkRobots } from "./services/robotsCheck.js";
-import { checkLlmsTxt } from "./services/llmsTxtCheck.js";
-import { checkSitemap } from "./services/sitemapCheck.js";
-import { checkSchema } from "./services/schemaCheck.js";
-import { checkContentStructure } from "./services/contentStructure.js";
-import { checkReadability } from "./services/readabilityCheck.js";
-import { checkMetadata } from "./services/metadataCheck.js";
-import { checkTechnical } from "./services/technicalCheck.js";
-import { calculateGeoScore } from "./utils/scoring.js";
+import { db } from "../../db/db.js";
+import { geoChecks } from "../../db/schema/geoChecks.js";
+import { lockGeoAnalysis, runGeoAnalysis } from "./geo.service.js";
+import { checkGeoRateLimit } from "../../lib/rateLimiter.js";
+import { assertPublicUrl, UnsafeUrlError } from "../../lib/safeUrl.js";
+import { getClientIp, normalizeEmail } from "../../lib/request.js";
+import { logError } from "../../lib/errorLog.js";
 
 export const runGeoCheck = async (c: Context) => {
   try {
     const body = await c.req.json();
-    let { url } = body;
+    const url = await assertPublicUrl(body.url);
+    const ip = getClientIp(c);
+    const user = c.get("user") as { id: number; email: string } | undefined;
 
-    if (!url) {
-      return c.json({ success: false, message: "URL required" }, 400);
+    if (!(await checkGeoRateLimit(user ? `user:${user.id}` : ip))) {
+      return c.json({ success: false, message: "Daily GEO check limit reached. Try again tomorrow." }, 429);
     }
 
-    // URL normalization
-    url = url.trim();
-    if (!/^https?:\/\//i.test(url)) {
-      url = "https://" + url;
-    }
+    const report = await runGeoAnalysis(url);
+    const email = normalizeEmail(body.email) ?? user?.email ?? null;
 
-    let parsedUrl: URL;
     try {
-      parsedUrl = new URL(url);
-    } catch {
-      return c.json({ success: false, message: "Invalid URL format" }, 400);
+      await db.insert(geoChecks).values({
+        url,
+        email,
+        userId: user?.id ?? null,
+        userIp: ip,
+        score: report.score.value,
+        result: report,
+      });
+    } catch (err) {
+      logError("GEO_LEAD_SAVE", err, { url });
     }
 
-    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
-
-    // Helper function to handle individual promises with an 8-second absolute timeout wrapper
-    const withTimeout = async <T>(promise: Promise<T>, defaultValue: T, timeoutMs: number = 7500): Promise<T> => {
-      let timeoutId: any;
-      const timeoutPromise = new Promise<T>((resolve) => {
-        timeoutId = setTimeout(() => {
-          resolve(defaultValue);
-        }, timeoutMs);
-      });
-
-      try {
-        const result = await Promise.race([promise, timeoutPromise]);
-        clearTimeout(timeoutId);
-        return result;
-      } catch {
-        clearTimeout(timeoutId);
-        return defaultValue;
-      }
-    };
-
-    // 1. Fetch main page HTML
-    const fetchHtml = async (): Promise<{ html: string; headers: any }> => {
-      const response = await axios.get(url, {
-        timeout: 7000,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9"
-        }
-      });
-      return {
-        html: typeof response.data === "string" ? response.data : "",
-        headers: response.headers
-      };
-    };
-
-    const pageResult = await withTimeout(fetchHtml(), { html: "", headers: {} });
-
-    // 2. Perform external resource checks concurrently
-    const [robotsRes, llmsTxtRes, sitemapRes] = await Promise.all([
-      withTimeout(checkRobots(baseUrl), { allowedBots: [], blockedBots: [], missing: true }),
-      withTimeout(checkLlmsTxt(baseUrl), { present: false, status: 404 }),
-      withTimeout(checkSitemap(baseUrl), { present: false, valid: false })
-    ]);
-
-    // 3. Parse HTML and run content/technical services
-    const $ = cheerio.load(pageResult.html);
-    const xRobotsHeader = pageResult.headers["x-robots-tag"] || undefined;
-
-    const schemaRes = checkSchema($);
-    const contentStrRes = checkContentStructure($);
-    const readabilityRes = checkReadability($);
-    const metaCheckRes = checkMetadata($);
-    const technicalRes = checkTechnical($, xRobotsHeader);
-
-    // 4. Calculate Scores and Recommendations
-    const finalReport = calculateGeoScore(
-      robotsRes,
-      llmsTxtRes,
-      sitemapRes,
-      schemaRes,
-      contentStrRes,
-      readabilityRes,
-      metaCheckRes,
-      technicalRes
-    );
-
-    return c.json({
-      url,
-      score: finalReport.score,
-      categories: finalReport.categories,
-      checks: finalReport.checks,
-      recommendations: finalReport.recommendations
-    });
-
+    return c.json({ ...lockGeoAnalysis(report), success: true });
   } catch (error: any) {
+    if (!(error instanceof UnsafeUrlError)) logError("GEO_CHECK", error);
     return c.json({
       success: false,
       message: error.message || "Failed to execute GEO analysis."
     }, 400);
+  }
+};
+
+export const getGeoLeads = async (c: Context) => {
+  try {
+    const limit = Math.min(Number(c.req.query("limit")) || 100, 500);
+    const data = await db
+      .select({
+        id: geoChecks.id,
+        url: geoChecks.url,
+        email: geoChecks.email,
+        userId: geoChecks.userId,
+        score: geoChecks.score,
+        createdAt: geoChecks.createdAt,
+      })
+      .from(geoChecks)
+      .orderBy(desc(geoChecks.createdAt))
+      .limit(limit);
+    return c.json({ success: true, data });
+  } catch (error: any) {
+    return c.json({ success: false, message: error.message }, 500);
   }
 };
