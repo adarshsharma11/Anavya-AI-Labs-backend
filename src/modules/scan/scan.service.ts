@@ -1,19 +1,20 @@
 import {
   claimReportGenerationRepo,
   createScanRepo,
+  findRecentCompleteScanRepo,
   findScanByRefRepo,
   getScanRepo,
   isPublicScanId,
   updateScanRepo,
   type ScanRow,
 } from "./scan.repository.js";
-import { runWebsiteScan } from "../../lib/scanner.js";
-import { compareScans } from "../../lib/compareScan.js";
 import { generateFullReport } from "../../lib/aiReport.js";
 import { sendReportReadyEmail } from "../../lib/sendOTP.js";
 import { runInBackground } from "../../lib/background.js";
 import { getUserById } from "../auth/auth.repository.js";
-import { lockGeoAnalysis, runGeoAnalysis } from "../geo/geo.service.js";
+import { isAuditComplete, startSiteAudit, summarizeAuditForAi } from "../audit/audit.service.js";
+import { compareAudits } from "../audit/compare.js";
+import type { AuditReport } from "../audit/types.js";
 
 import { logError } from "../../lib/errorLog.js";
 
@@ -25,6 +26,8 @@ export class ScanNotFoundError extends Error {
   }
 }
 
+export const AUDIT_CACHE_HOURS = 24;
+
 type CreateScanInput = {
   url: string;
   ip: string;
@@ -33,62 +36,101 @@ type CreateScanInput = {
   email?: string | null;
   autoUnlock?: boolean;
   notify?: boolean;
+  useCache?: boolean;
+  waitForCompletion?: boolean;
+};
+
+const isV2 = (preview: unknown): preview is AuditReport =>
+  Boolean(preview && typeof preview === "object" && (preview as { version?: number }).version === 2);
+
+const settledStatus = (scan: ScanRow) =>
+  scan.fullReport ? "completed" : scan.isUnlocked ? "paid" : "preview_done";
+
+const finishScan = async (scanId: number, notify: boolean) => {
+  const scan = await getScanRepo(scanId);
+  if (!scan) return;
+  await updateScanRepo(scanId, { status: settledStatus(scan) });
+  if (scan.isUnlocked && !scan.fullReport) await generateAndStoreReport(scanId, { notify });
 };
 
 export const createScanService = async (input: CreateScanInput) => {
-  const { url, ip, competitorUrl, userId, email, autoUnlock, notify = true } = input;
-
-  const scan = await createScanRepo({
+  const {
+    url,
+    ip,
+    competitorUrl,
+    userId,
+    email,
+    autoUnlock = false,
+    notify = true,
+    useCache = true,
+    waitForCompletion = false,
+  } = input;
+  const normalizedUrl = url.toLowerCase();
+  const baseRow = {
     url,
     competitorUrl: competitorUrl || null,
-    normalizedUrl: url.toLowerCase(),
+    normalizedUrl,
     userIp: ip,
-    status: "processing",
-    preview: null,
-    competitorPreview: null,
-    competitorAnalysis: null,
     fullReport: null,
     userEmail: email || null,
     userId: userId || null,
     planId: null,
-    isUnlocked: Boolean(autoUnlock),
+    isUnlocked: autoUnlock,
+  };
+
+  const cached = useCache && !competitorUrl ? await findRecentCompleteScanRepo(normalizedUrl, AUDIT_CACHE_HOURS) : undefined;
+  if (cached?.preview) {
+    const scan = await createScanRepo({ ...baseRow, status: autoUnlock ? "paid" : "preview_done", preview: cached.preview });
+    if (!scan) throw new Error("Scan creation failed");
+    if (autoUnlock) runInBackground("PRO_REPORT_GENERATION", generateAndStoreReport(scan.id, { notify }));
+    return { id: scan.id, publicId: scan.publicId, score: cached.preview.overall as number, cached: true };
+  }
+
+  let resolveRow: (id: number) => void = () => {};
+  const rowReady = new Promise<number>((resolve) => {
+    resolveRow = resolve;
   });
 
+  const competitorAudit = competitorUrl
+    ? startSiteAudit(competitorUrl, { multiPage: false, speed: false })
+        .then((run) => run.initial)
+        .catch((err) => {
+          logError("COMPETITOR_SCAN", err, { competitorUrl });
+          return null;
+        })
+    : Promise.resolve(null);
+
+  const run = await startSiteAudit(url, { multiPage: true, speed: true }, async (report) => {
+    await updateScanRepo(await rowReady, { preview: report });
+  });
+  const competitorPreview = await competitorAudit;
+
+  const scan = await createScanRepo({
+    ...baseRow,
+    status: "processing",
+    preview: run.initial,
+    competitorPreview,
+    competitorAnalysis: competitorPreview ? compareAudits(run.initial, competitorPreview) : null,
+  });
   if (!scan) {
     logError("CREATE_SCAN", new Error("Scan creation failed"), { url, ip });
     throw new Error("Scan creation failed");
   }
+  resolveRow(scan.id);
 
-  const [preview, geo, competitorPreview] = await Promise.all([
-    runWebsiteScan(url),
-    runGeoAnalysis(url).catch((err) => {
-      logError("SCAN_GEO", err, { url });
-      return null;
-    }),
-    competitorUrl
-      ? runWebsiteScan(competitorUrl).catch((err) => {
-          logError("COMPETITOR_SCAN", err, { competitorUrl });
-          return null;
-        })
-      : Promise.resolve(null),
-  ]);
-
-  const fullPreview = { ...preview, geo };
-  const competitorAnalysis =
-    competitorPreview ? compareScans(fullPreview, competitorPreview) : null;
-
-  await updateScanRepo(scan.id, {
-    status: autoUnlock ? "paid" : "preview_done",
-    preview: fullPreview,
-    competitorPreview,
-    competitorAnalysis,
+  const finish = run.completion.then(async (final) => {
+    await updateScanRepo(scan.id, { preview: final });
+    await finishScan(scan.id, notify);
+    return final;
   });
 
-  if (autoUnlock) {
-    runInBackground("PRO_REPORT_GENERATION", generateAndStoreReport(scan.id, { notify }));
+  if (waitForCompletion) {
+    const final = await finish;
+    return { id: scan.id, publicId: scan.publicId, score: final.overall, cached: false };
   }
 
-  return { id: scan.id, publicId: scan.publicId, score: preview.overall };
+  runInBackground("AUDIT_COMPLETION", finish);
+  return { id: scan.id, publicId: scan.publicId, score: run.initial.overall, cached: false };
 };
 
 export const resolveReportEmail = async (scan: ScanRow) => {
@@ -98,20 +140,20 @@ export const resolveReportEmail = async (scan: ScanRow) => {
   return user?.email ?? null;
 };
 
+const aiInput = (preview: unknown) => (isV2(preview) ? summarizeAuditForAi(preview) : preview);
+
 export const generateAndStoreReport = async (scanId: number, options: { notify?: boolean } = {}) => {
+  const current = await getScanRepo(scanId);
+  if (!current?.preview || !isAuditComplete(current.preview)) return;
+
   const claimed = await claimReportGenerationRepo(scanId);
   if (!claimed) return;
 
-  const scan = await getScanRepo(scanId);
-  if (!scan?.preview) {
-    await updateScanRepo(scanId, { status: "report_failed" });
-    return;
-  }
-
+  const scan = (await getScanRepo(scanId)) ?? current;
   try {
-    const fullReport = await generateFullReport(scan.url, scan.preview, {
+    const fullReport = await generateFullReport(scan.url, aiInput(scan.preview), {
       url: scan.competitorUrl,
-      preview: scan.competitorPreview,
+      preview: aiInput(scan.competitorPreview),
       analysis: scan.competitorAnalysis,
     });
     await updateScanRepo(scanId, { fullReport, status: "completed" });
@@ -124,13 +166,11 @@ export const generateAndStoreReport = async (scanId: number, options: { notify?:
   }
 };
 
-const lockPreview = (preview: any) => {
-  if (!preview) return preview;
-  const { allIssues, allQuickWins, geo, ...rest } = preview;
-  return { ...rest, geo: lockGeoAnalysis(geo), locked: true };
+const lockLegacyPreview = (preview: any) => {
+  if (!preview || isV2(preview)) return preview;
+  const { allIssues, allQuickWins, ...rest } = preview;
+  return { ...rest, locked: true };
 };
-
-const unlockPreview = (preview: any) => (preview ? { ...preview, locked: false } : preview);
 
 export const canAccessFullReport = (scan: ScanRow, ref: string, viewer: ScanViewer) => {
   if (viewer?.role === "admin") return true;
@@ -151,8 +191,9 @@ export const findAccessibleScan = async (ref: string, viewer: ScanViewer) => {
 export const getScanService = async (ref: string, viewer: ScanViewer) => {
   const { scan, fullAccess } = await findAccessibleScan(ref, viewer);
   const unlocked = Boolean(scan.isUnlocked) && fullAccess;
+  const auditComplete = isAuditComplete(scan.preview);
 
-  if (scan.isUnlocked && !scan.fullReport && scan.preview) {
+  if (scan.isUnlocked && !scan.fullReport && auditComplete) {
     runInBackground("REPORT_RETRY", generateAndStoreReport(scan.id));
   }
 
@@ -162,10 +203,10 @@ export const getScanService = async (ref: string, viewer: ScanViewer) => {
     url: scan.url,
     competitorUrl: scan.competitorUrl,
     status: scan.status,
-    preview: unlocked ? unlockPreview(scan.preview) : lockPreview(scan.preview),
-    competitorPreview: unlocked
-      ? unlockPreview(scan.competitorPreview)
-      : lockPreview(scan.competitorPreview),
+    reportVersion: isV2(scan.preview) ? 2 : 1,
+    auditComplete,
+    preview: unlocked ? scan.preview : lockLegacyPreview(scan.preview),
+    competitorPreview: scan.competitorPreview,
     competitorAnalysis: scan.competitorAnalysis,
     fullReport: unlocked ? scan.fullReport : null,
     isUnlocked: Boolean(scan.isUnlocked),

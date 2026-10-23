@@ -1,6 +1,7 @@
 import { db } from "../../db/db.js";
 import { scans } from "../../db/schema/scan.js";
-import { and, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { reportPdfs } from "../../db/schema/reportPdfs.js";
+import { and, desc, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 export type ScanRow = typeof scans.$inferSelect;
 
@@ -36,6 +37,23 @@ export const findScanByRefRepo = async (ref: string | number) => {
   return getScanRepo(id);
 };
 
+export const findRecentCompleteScanRepo = async (normalizedUrl: string, maxAgeHours: number) => {
+  const res = await db
+    .select()
+    .from(scans)
+    .where(
+      and(
+        eq(scans.normalizedUrl, normalizedUrl),
+        isNull(scans.competitorUrl),
+        sql`${scans.createdAt} > now() - (${maxAgeHours} * interval '1 hour')`,
+        sql`${scans.preview}->>'complete' = 'true'`,
+      ),
+    )
+    .orderBy(desc(scans.createdAt))
+    .limit(1);
+  return res[0];
+};
+
 export const STUCK_REPORT_MINUTES = 5;
 
 export const claimReportGenerationRepo = async (id: number) => {
@@ -58,4 +76,23 @@ export const claimReportGenerationRepo = async (id: number) => {
     )
     .returning({ id: scans.id });
   return res.length > 0;
+};
+
+export const getCachedPdfRepo = async (scanId: number, variant: string) => {
+  const res = await db
+    .select({ contentBase64: reportPdfs.contentBase64 })
+    .from(reportPdfs)
+    .where(and(eq(reportPdfs.scanId, scanId), eq(reportPdfs.variant, variant)));
+  return res[0] ? Buffer.from(res[0].contentBase64, "base64") : null;
+};
+
+export const saveCachedPdfRepo = async (scanId: number, variant: string, pdf: Buffer) => {
+  await db
+    .insert(reportPdfs)
+    .values({ scanId, variant, contentBase64: pdf.toString("base64") })
+    .onConflictDoNothing();
+};
+
+export const clearCachedPdfsRepo = async (scanId: number) => {
+  await db.delete(reportPdfs).where(eq(reportPdfs.scanId, scanId));
 };

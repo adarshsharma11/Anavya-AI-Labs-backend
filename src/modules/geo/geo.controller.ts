@@ -3,7 +3,7 @@ import { desc } from "drizzle-orm";
 
 import { db } from "../../db/db.js";
 import { geoChecks } from "../../db/schema/geoChecks.js";
-import { lockGeoAnalysis, runGeoAnalysis } from "./geo.service.js";
+import { AuditError, startSiteAudit } from "../audit/audit.service.js";
 import { checkGeoRateLimit } from "../../lib/rateLimiter.js";
 import { assertPublicUrl, UnsafeUrlError } from "../../lib/safeUrl.js";
 import { getClientIp, normalizeEmail } from "../../lib/request.js";
@@ -20,7 +20,7 @@ export const runGeoCheck = async (c: Context) => {
       return c.json({ success: false, message: "Daily GEO check limit reached. Try again tomorrow." }, 429);
     }
 
-    const report = await runGeoAnalysis(url);
+    const { initial: report } = await startSiteAudit(url, { multiPage: false, speed: false });
     const email = normalizeEmail(body.email) ?? user?.email ?? null;
 
     try {
@@ -29,16 +29,16 @@ export const runGeoCheck = async (c: Context) => {
         email,
         userId: user?.id ?? null,
         userIp: ip,
-        score: report.score.value,
+        score: report.overall,
         result: report,
       });
     } catch (err) {
       logError("GEO_LEAD_SAVE", err, { url });
     }
 
-    return c.json({ ...lockGeoAnalysis(report), success: true });
+    return c.json({ success: true, data: report });
   } catch (error: any) {
-    if (!(error instanceof UnsafeUrlError)) logError("GEO_CHECK", error);
+    if (!(error instanceof UnsafeUrlError) && !(error instanceof AuditError)) logError("GEO_CHECK", error);
     return c.json({
       success: false,
       message: error.message || "Failed to execute GEO analysis."

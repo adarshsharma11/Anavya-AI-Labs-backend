@@ -33,10 +33,24 @@ export const updateProfileService = async (userId: number, data: any) => {
 };
 
 export const getUserScansService = async (userId: number) => {
-  return await db.query.scans.findMany({
-    where: eq(scans.userId, userId),
-    orderBy: [desc(scans.createdAt)],
-  });
+  return await db
+    .select({
+      id: scans.id,
+      publicId: scans.publicId,
+      url: scans.url,
+      competitorUrl: scans.competitorUrl,
+      status: scans.status,
+      isUnlocked: scans.isUnlocked,
+      hasFullReport: sql<boolean>`${scans.fullReport} IS NOT NULL`,
+      overall: sql<number | null>`(${scans.preview}->>'overall')::int`,
+      verdict: sql<string | null>`${scans.preview}->>'verdict'`,
+      categories: sql<Record<string, number | null> | null>`${scans.preview}->'categories'`,
+      reportVersion: sql<number>`COALESCE((${scans.preview}->>'version')::int, 1)`,
+      createdAt: scans.createdAt,
+    })
+    .from(scans)
+    .where(eq(scans.userId, userId))
+    .orderBy(desc(scans.createdAt));
 };
 
 export const getUserAnalyticsService = async (userId: number) => {
@@ -45,25 +59,27 @@ export const getUserAnalyticsService = async (userId: number) => {
   const res = await db.execute(sql`
     SELECT 
       COALESCE(COUNT(*), 0) as "totalScans",
-      COALESCE(AVG((preview->'categories'->>'performance')::int), 0) as "avgPerformanceScore",
-      COALESCE(AVG((preview->'categories'->>'seo')::int), 0) as "avgSeoScore",
+      COALESCE(AVG((preview->>'overall')::int), 0) as "avgOverallScore",
+      COALESCE(AVG(COALESCE(preview->'categories'->>'speed', preview->'categories'->>'performance')::int), 0) as "avgPerformanceScore",
+      COALESCE(AVG(COALESCE(preview->'categories'->>'technical', preview->'categories'->>'seo')::int), 0) as "avgSeoScore",
+      COALESCE(AVG((preview->'categories'->>'aeo')::int), 0) as "avgAeoScore",
+      COALESCE(AVG((preview->'categories'->>'geo')::int), 0) as "avgGeoScore",
       COALESCE(SUM((preview->>'totalIssuesFound')::int), 0) as "totalIssuesFound"
     FROM scans
     WHERE user_id = ${userId}
   `);
 
-  const analytics = res.rows[0] || {
-    totalScans: 0,
-    avgPerformanceScore: 0,
-    avgSeoScore: 0,
-    totalIssuesFound: 0
-  };
+  const analytics = res.rows[0] ?? {};
+  const avg = (key: string) => Math.round(Number(analytics[key] ?? 0));
 
   return {
-    totalScans: Number(analytics.totalScans),
-    avgPerformanceScore: Math.round(Number(analytics.avgPerformanceScore)),
-    avgSeoScore: Math.round(Number(analytics.avgSeoScore)),
-    totalIssuesFound: Number(analytics.totalIssuesFound),
+    totalScans: Number(analytics.totalScans ?? 0),
+    avgOverallScore: avg("avgOverallScore"),
+    avgPerformanceScore: avg("avgPerformanceScore"),
+    avgSeoScore: avg("avgSeoScore"),
+    avgAeoScore: avg("avgAeoScore"),
+    avgGeoScore: avg("avgGeoScore"),
+    totalIssuesFound: Number(analytics.totalIssuesFound ?? 0),
     recentActivity: userScans.slice(0, 5)
   };
 };

@@ -252,6 +252,120 @@ export const verifyPayment = async (c: Context) => {
   }
 };
 
+export const DONATION_LIMITS = {
+  INR: { min: 50, max: 50000 },
+  USD: { min: 1, max: 500 },
+} as const;
+
+type DonationCurrency = keyof typeof DONATION_LIMITS;
+
+export const createDonationOrder = async (c: Context) => {
+  try {
+    const body = await c.req.json();
+    const user = c.get("user") as { id: number; email: string } | undefined;
+    const currency: DonationCurrency =
+      body.currency === "USD" || body.currency === "INR"
+        ? body.currency
+        : resolveRegion(body.region, c) === "IN" ? "INR" : "USD";
+    const limits = DONATION_LIMITS[currency];
+    const amount = Math.round(Number(body.amount) * 100) / 100;
+
+    if (!Number.isFinite(amount) || amount < limits.min || amount > limits.max) {
+      return c.json(
+        { success: false, code: "INVALID_AMOUNT", message: `Choose an amount between ${limits.min} and ${limits.max} ${currency}.`, limits },
+        400,
+      );
+    }
+
+    const email = normalizeEmail(body.email) ?? user?.email ?? "";
+    if (body.email && !normalizeEmail(body.email)) {
+      return c.json({ success: false, code: "INVALID_EMAIL", message: "Enter a valid email or leave it blank." }, 400);
+    }
+    const amountSubunits = Math.round(amount * 100);
+    const order = await getRazorpay().orders.create({
+      amount: amountSubunits,
+      currency,
+      receipt: `donation_${Date.now()}`,
+      notes: {
+        type: "donation",
+        email,
+        name: String(body.name ?? "").slice(0, 80),
+        scanId: "",
+        publicId: String(body.scanId ?? "").slice(0, 40),
+        amountSubunits: String(amountSubunits),
+      },
+    });
+
+    return c.json({
+      success: true,
+      order,
+      amount,
+      currency,
+      prefill: { email, name: body.name ?? "" },
+      key_id: env.RAZORPAY_KEY_ID,
+    });
+  } catch (e: any) {
+    logError("DONATION_ORDER_FAILED", e);
+    return c.json({ success: false, message: e.error?.description || e.message || "Could not start donation" }, 500);
+  }
+};
+
+const recordDonation = async (input: {
+  orderId: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  email?: string | null;
+  userId?: number | null;
+}) =>
+  recordPaymentRepo({
+    type: "donation",
+    userId: input.userId ?? null,
+    razorpayOrderId: input.orderId,
+    razorpayPaymentId: input.paymentId,
+    amountSubunits: input.amount,
+    currency: input.currency.toUpperCase(),
+    status: "captured",
+    email: input.email || null,
+  });
+
+export const verifyDonation = async (c: Context) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await c.req.json();
+    if (!env.RAZORPAY_KEY_SECRET) {
+      return c.json({ success: false, message: "RAZORPAY_KEY_SECRET is not set" }, 500);
+    }
+
+    const expected = crypto
+      .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+    if (!secureCompare(expected, razorpay_signature)) {
+      return c.json({ success: false, message: "Invalid signature" }, 400);
+    }
+
+    const order = await getRazorpay().orders.fetch(razorpay_order_id);
+    if (order.notes?.type !== "donation") {
+      return c.json({ success: false, message: "Not a donation order" }, 400);
+    }
+
+    const user = c.get("user") as { id: number } | undefined;
+    await recordDonation({
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      amount: Number(order.amount),
+      currency: String(order.currency),
+      email: String(order.notes?.email || ""),
+      userId: user?.id,
+    });
+
+    return c.json({ success: true, message: "Thank you for supporting the project!" });
+  } catch (e: any) {
+    logError("VERIFY_DONATION_FAILED", e);
+    return c.json({ success: false, message: e.message }, 500);
+  }
+};
+
 export const razorpayWebhook = async (c: any) => {
   try {
     const body = await c.req.text();
@@ -284,12 +398,12 @@ export const razorpayWebhook = async (c: any) => {
 
     if (event.event === "payment.captured") {
       const payment = event.payload?.payment?.entity;
-      let scanId = payment?.notes?.scanId as string | undefined;
+      let notes = (payment?.notes ?? {}) as Record<string, string | number | null>;
 
-      if (!scanId && payment?.order_id) {
+      if (!notes.scanId && !notes.type && payment?.order_id) {
         try {
           const order = await getRazorpay().orders.fetch(payment.order_id);
-          scanId = order.notes?.scanId as string | undefined;
+          notes = (order.notes ?? {}) as Record<string, string | number | null>;
         } catch (err) {
           logError("PAYMENT_WEBHOOK_ORDER_FETCH", err, {
             orderId: payment.order_id,
@@ -297,6 +411,17 @@ export const razorpayWebhook = async (c: any) => {
         }
       }
 
+      if (notes.type === "donation" && payment?.id) {
+        await recordDonation({
+          orderId: payment.order_id,
+          paymentId: payment.id,
+          amount: Number(payment.amount) || 0,
+          currency: String(payment.currency || "INR"),
+          email: String(notes.email || payment.email || ""),
+        });
+      }
+
+      const scanId = notes.type === "donation" ? undefined : (notes.scanId as string | undefined);
       const scan = scanId ? await getScanRepo(Number(scanId)) : undefined;
       if (scan && payment?.id) {
         await fulfillReportPayment(scan, {

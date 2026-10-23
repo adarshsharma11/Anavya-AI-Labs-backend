@@ -3,41 +3,11 @@ import chromium from '@sparticuz/chromium';
 
 import os from 'os';
 
-export type PdfBranding = {
-  companyName?: string;
-  companyLogoUrl?: string;
-};
+import { escapeHtml, list, paragraphs, safeLogoUrl, type PdfBranding } from './pdf/html.js';
+import { buildAuditHtml } from './pdf/auditHtml.js';
+import type { AuditReport } from '../modules/audit/types.js';
 
-const escapeHtml = (value: unknown) =>
-  String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const safeLogoUrl = (value?: string) => {
-  if (!value) return '';
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'https:' ? parsed.toString() : '';
-  } catch {
-    return '';
-  }
-};
-
-const list = (items: unknown) => {
-  if (!Array.isArray(items) || items.length === 0) return '';
-  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
-};
-
-const paragraphs = (text: unknown) =>
-  String(text ?? '')
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => `<p>${escapeHtml(line)}</p>`)
-    .join('');
+export type { PdfBranding };
 
 const section = (title: string, body: string) =>
   body ? `<div class="section"><h3>${escapeHtml(title)}</h3>${body}</div>` : '';
@@ -45,7 +15,7 @@ const section = (title: string, body: string) =>
 const metricCard = (label: string, value: unknown) =>
   `<div class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? 'N/A')}</strong></div>`;
 
-const buildHtml = (scan: any, branding: PdfBranding) => {
+const buildLegacyHtml = (scan: any, branding: PdfBranding) => {
   const preview = scan.preview ?? {};
   const report = scan.fullReport ?? {};
   const geo = preview.geo;
@@ -145,8 +115,25 @@ const buildHtml = (scan: any, branding: PdfBranding) => {
   `;
 };
 
-export const generatePdfReport = async (scan: any, branding: PdfBranding = {}): Promise<Buffer> => {
-  const htmlContent = buildHtml(scan, branding);
+export type PdfOptions = {
+  includeAiReport: boolean;
+  supportUrl: string;
+};
+
+export const buildReportHtml = (scan: any, branding: PdfBranding, options: PdfOptions) => {
+  const aiReport = options.includeAiReport ? scan.fullReport ?? null : null;
+  if (scan.preview?.version === 2) {
+    return buildAuditHtml(scan.preview as AuditReport, aiReport, branding, options.supportUrl);
+  }
+  return buildLegacyHtml({ ...scan, fullReport: aiReport }, branding);
+};
+
+export const generatePdfReport = async (
+  scan: any,
+  branding: PdfBranding,
+  options: PdfOptions,
+): Promise<Buffer> => {
+  const htmlContent = buildReportHtml(scan, branding, options);
 
   // Always use local chrome on Windows / macOS. Use Sparticuz only in Linux environments (like Vercel production).
   const isWindows = os.platform() === 'win32';

@@ -65,7 +65,8 @@ export const getMonitorHistoryService = async (userId: number, id: number) => {
       publicId: scans.publicId,
       status: scans.status,
       overall: sql<number | null>`(${scans.preview}->>'overall')::int`,
-      geoScore: sql<number | null>`(${scans.preview}->'geo'->'score'->>'value')::int`,
+      geoScore: sql<number | null>`COALESCE(${scans.preview}->'categories'->>'geo', ${scans.preview}->'geo'->'score'->>'value')::int`,
+      aeoScore: sql<number | null>`(${scans.preview}->'categories'->>'aeo')::int`,
       createdAt: scans.createdAt,
     })
     .from(scans)
@@ -89,6 +90,8 @@ export const checkMonitor = async (monitor: Monitor) => {
     userId: monitor.userId,
     autoUnlock: true,
     notify: false,
+    useCache: false,
+    waitForCompletion: true,
   });
 
   await db

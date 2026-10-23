@@ -6,7 +6,7 @@ import {
   getAdminScansService,
   getAdminRevenueService,
 } from "./admin.service.js";
-import { getScanRepo, updateScanRepo } from "../scan/scan.repository.js";
+import { clearCachedPdfsRepo, getScanRepo, updateScanRepo } from "../scan/scan.repository.js";
 import { generateAndStoreReport } from "../scan/scan.service.js";
 
 export const getAdminAnalytics = async (c: Context) => {
@@ -62,6 +62,7 @@ export const regenerateScanReport = async (c: Context) => {
     if (!scan.isUnlocked) return c.json({ success: false, message: "Scan is not paid" }, 400);
 
     await updateScanRepo(scan.id, { fullReport: null, status: "paid", reportStartedAt: null });
+    await clearCachedPdfsRepo(scan.id);
     await generateAndStoreReport(scan.id);
 
     const updated = await getScanRepo(scan.id);

@@ -11,30 +11,27 @@ export const getAdminAnalyticsService = async () => {
 
   const res = await db.execute(sql`
     SELECT 
-      COALESCE(AVG((preview->'categories'->>'performance')::int), 0) as "avgPerformanceScore",
-      COALESCE(AVG((preview->'categories'->>'seo')::int), 0) as "avgSeoScore",
-      COALESCE(AVG((preview->'categories'->>'accessibility')::int), 0) as "avgAccessibilityScore",
-      COALESCE(AVG((preview->'categories'->>'security')::int), 0) as "avgSecurityScore",
+      COALESCE(AVG((preview->>'overall')::int), 0) as "avgOverallScore",
+      COALESCE(AVG(COALESCE(preview->'categories'->>'speed', preview->'categories'->>'performance')::int), 0) as "avgPerformanceScore",
+      COALESCE(AVG(COALESCE(preview->'categories'->>'technical', preview->'categories'->>'seo')::int), 0) as "avgSeoScore",
+      COALESCE(AVG((preview->'categories'->>'aeo')::int), 0) as "avgAeoScore",
+      COALESCE(AVG((preview->'categories'->>'geo')::int), 0) as "avgGeoScore",
       COALESCE(SUM((preview->>'totalIssuesFound')::int), 0) as "totalIssuesFound"
     FROM scans
   `);
 
-  const stats = res.rows[0] || {
-    avgPerformanceScore: 0,
-    avgSeoScore: 0,
-    avgAccessibilityScore: 0,
-    avgSecurityScore: 0,
-    totalIssuesFound: 0
-  };
+  const stats = res.rows[0] ?? {};
+  const avg = (key: string) => Math.round(Number(stats[key] ?? 0));
 
   return {
     totalUsers: userCountResult?.count || 0,
     totalScans: scanCountResult?.count || 0,
-    avgPerformanceScore: Math.round(Number(stats.avgPerformanceScore)),
-    avgSeoScore: Math.round(Number(stats.avgSeoScore)),
-    avgAccessibilityScore: Math.round(Number(stats.avgAccessibilityScore)),
-    avgSecurityScore: Math.round(Number(stats.avgSecurityScore)),
-    totalIssuesFound: Number(stats.totalIssuesFound),
+    avgOverallScore: avg("avgOverallScore"),
+    avgPerformanceScore: avg("avgPerformanceScore"),
+    avgSeoScore: avg("avgSeoScore"),
+    avgAeoScore: avg("avgAeoScore"),
+    avgGeoScore: avg("avgGeoScore"),
+    totalIssuesFound: Number(stats.totalIssuesFound ?? 0),
   };
 };
 

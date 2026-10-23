@@ -14,7 +14,7 @@ export const AI_AUDIT_REPORT_PROMPT = (input: {
   const competitorBlock = input.competitor?.url
     ? `
 Competitor URL: ${input.competitor.url}
-Competitor preview scan data (JSON): ${JSON.stringify(input.competitor.preview ?? null)}
+Competitor audit findings (JSON): ${JSON.stringify(input.competitor.preview ?? null)}
 Competitor comparison analysis (JSON): ${JSON.stringify(input.competitor.analysis ?? null)}
 `
     : "";
@@ -23,7 +23,7 @@ Competitor comparison analysis (JSON): ${JSON.stringify(input.competitor.analysi
 You are a senior growth-focused website auditor and conversion strategist.
 
 Website URL: ${input.url}
-Preview scan data (JSON): ${JSON.stringify(input.preview)}
+Audit findings (JSON: category scores out of 100 for AEO, GEO, AI crawlers, technical SEO, content and page speed, per-page scores, and the top issues with evidence): ${JSON.stringify(input.preview)}
 ${competitorBlock}
 
 Output requirements:
@@ -33,11 +33,11 @@ Output requirements:
 
 Field guidance:
 - executiveSummary: 3–6 sentences. Include the biggest growth bottleneck + fastest win + expected outcome.
-- technicalAnalysis: 8–14 short paragraphs/bullets (as text) referencing the provided metrics (load time, page size, images, scripts, indexing, social tags).
+- technicalAnalysis: 8–14 short paragraphs/bullets (as text) referencing the audit evidence (category scores, Core Web Vitals, structured data types, crawler access, word counts, per-page differences).
 - seoImprovements: 6–10 actionable items. Each item should be specific and testable (what to change + where + why).
 - performanceImprovements: 6–10 actionable items. Focus on impact first. Mention concrete tactics (image formats/compression, caching, script deferral, third-party scripts).
 - businessGrowthSuggestions: 6–10 actionable items. Focus on lead-gen/CRO, messaging, trust, and retention. Tie each suggestion to a measurable KPI.
-- geoImprovements: 5–8 actionable items to get cited by ChatGPT, Perplexity, Gemini and Google AI Overviews. Ground them in preview.geo (AI crawler access in robots.txt, llms.txt, schema types, answer-first content structure, FAQ blocks, readability, metadata). If preview.geo is missing, base them on the SEO data.
+- geoImprovements: 5–8 actionable items to get cited by ChatGPT, Perplexity, Gemini and Google AI Overviews. Ground them in the audit issues (AI crawler access, llms.txt/ai.txt, schema types, question headings, direct answers, factual density, entity clarity, citations).
 - estimatedTrafficImpact: a realistic range based on the data (e.g., Low/Medium/High + % range) and what drives it.
 - competitorStrategy:
   - If no competitor data is provided, set competitorStrategy to null.

@@ -63,6 +63,16 @@ const statements = [
     last_checked_at timestamp,
     created_at timestamp DEFAULT now()
   )`,
+
+  `CREATE TABLE IF NOT EXISTS report_pdfs (
+    scan_id integer NOT NULL,
+    variant text NOT NULL,
+    content_base64 text NOT NULL,
+    created_at timestamp DEFAULT now(),
+    PRIMARY KEY (scan_id, variant)
+  )`,
+  `ALTER TABLE payments ADD COLUMN IF NOT EXISTS email text`,
+  `CREATE INDEX IF NOT EXISTS scans_normalized_url_created_idx ON scans (normalized_url, created_at DESC)`,
 ];
 
 for (const statement of statements) {

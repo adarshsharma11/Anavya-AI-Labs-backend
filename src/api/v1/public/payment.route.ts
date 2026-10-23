@@ -4,6 +4,8 @@ import {
   getQuote,
   verifyPayment,
   razorpayWebhook,
+  createDonationOrder,
+  verifyDonation,
 } from "../../../modules/payment/payment.controller.js";
 import {
   cancelSubscription,
@@ -19,6 +21,9 @@ app.get("/payment/razorpay/quote", getQuote);
 app.post("/payment/razorpay/create-order", optionalVerifyToken, createOrder);
 app.post("/payment/razorpay/verify", verifyPayment);
 app.post("/payment/razorpay/webhook", razorpayWebhook);
+
+app.post("/payment/donate/create-order", optionalVerifyToken, createDonationOrder);
+app.post("/payment/donate/verify", optionalVerifyToken, verifyDonation);
 
 app.post("/payment/razorpay/subscribe", verifyToken, createSubscription);
 app.post("/payment/razorpay/subscribe/verify", verifyToken, verifySubscription);
