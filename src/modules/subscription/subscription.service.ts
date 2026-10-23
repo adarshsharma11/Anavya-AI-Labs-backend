@@ -10,7 +10,7 @@ import { getUserById } from "../auth/auth.repository.js";
 
 export const ACCESS_STATUSES = ["active", "cancel_scheduled"];
 
-export const FREE_DAILY_SCANS = Number(process.env.FREE_DAILY_SCANS || "5");
+export const FREE_DAILY_SCANS = Number(process.env.FREE_DAILY_SCANS || "15");
 
 const toDate = (unixSeconds: unknown) =>
   typeof unixSeconds === "number" && unixSeconds > 0 ? new Date(unixSeconds * 1000) : null;
