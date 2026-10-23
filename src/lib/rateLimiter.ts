@@ -39,7 +39,7 @@ export const checkOtpRateLimit = (ipOrEmail: string) =>
 export const checkAiRateLimit = (ipOrUserId: string) =>
   consumeRateLimit(`ai:${ipOrUserId}`, 10, HOUR);
 
-export const checkDailyScanLimit = (key: string, maxScans = 5) =>
+export const checkDailyScanLimit = (key: string, maxScans = 10) =>
   consumeRateLimit(`scan_daily:${key}`, maxScans, DAY);
 
 export const checkGeoRateLimit = (ip: string) => consumeRateLimit(`geo:${ip}`, 20, DAY);
