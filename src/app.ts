@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { secureHeaders } from 'hono/secure-headers'
 import pricingRoute from './api/v1/public/pricing.route.js'
 import scanRoute from './api/v1/public/scan.route.js'
 import servicesRoute from './api/v1/public/services.route.js'
@@ -36,6 +37,18 @@ app.use(
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-client-region'],
+  })
+)
+
+// The frontend lives on another origin, so resources must be loadable cross-origin; CORS still governs reads.
+app.use(
+  secureHeaders({
+    contentSecurityPolicy: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+    crossOriginResourcePolicy: 'cross-origin',
+    strictTransportSecurity: 'max-age=31536000; includeSubDomains',
   })
 )
 
