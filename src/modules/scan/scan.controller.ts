@@ -9,6 +9,7 @@ import { checkRateLimit, checkDailyScanLimit } from "../../lib/rateLimiter.js";
 import { assertPublicUrl, UnsafeUrlError } from "../../lib/safeUrl.js";
 import { getClientIp, normalizeEmail } from "../../lib/request.js";
 import { getUserPlanLimits } from "../subscription/subscription.service.js";
+import { aiReportsEnabled } from "../../lib/features.js";
 import { getProfileService } from "../dashboard/dashboard.service.js";
 import { logError } from "../../lib/errorLog.js";
 import { AuditError, isAuditComplete } from "../audit/audit.service.js";
@@ -39,27 +40,30 @@ export const createScan = async (c: Context) => {
           {
             success: false,
             code: "DAILY_LIMIT",
-            message: `Free plan limit reached: ${limits.dailyScanLimit} scans per day. Upgrade to Pro for unlimited scans.`,
+            plan: limits.plan.slug,
+            limit: limits.dailyScanLimit,
+            message: `You've used all ${limits.dailyScanLimit} scans included in the ${limits.plan.name} plan for today.${limits.isPro ? " Your limit resets 24 hours after your first scan." : " Upgrade for more daily scans."}`,
           },
           429,
         );
       }
     }
 
+    const autoUnlock = aiReportsEnabled() && limits.isPaid;
     const scan = await createScanService({
       url,
       ip,
       competitorUrl,
       userId: user?.id,
       email: normalizeEmail(body.email) ?? user?.email ?? null,
-      autoUnlock: limits.isPro,
+      autoUnlock,
     });
 
     return c.json({
       success: true,
       scanId: scan.publicId,
       publicId: scan.publicId,
-      unlocked: limits.isPro,
+      unlocked: autoUnlock,
       cached: scan.cached,
     });
   } catch (e: any) {
@@ -92,7 +96,7 @@ export const getScanPdf = async (c: Context) => {
       );
     }
 
-    const includeAiReport = Boolean(scan.isUnlocked && fullAccess);
+    const includeAiReport = Boolean(scan.isUnlocked && fullAccess && (scan.fullReport || aiReportsEnabled()));
     if (includeAiReport && !scan.fullReport) {
       return c.json(
         { success: false, code: "REPORT_PENDING", message: "Your AI report is still being generated. Try again in a minute." },
@@ -102,7 +106,7 @@ export const getScanPdf = async (c: Context) => {
 
     const branding: { companyName?: string; companyLogoUrl?: string } = {};
     const user = c.get("user") as { id: number } | undefined;
-    if (user && (await getUserPlanLimits(user.id)).isPro) {
+    if (user && (await getUserPlanLimits(user.id)).whiteLabel) {
       const profile = await getProfileService(user.id).catch(() => null);
       branding.companyName = c.req.query("companyName") || profile?.companyName || undefined;
       branding.companyLogoUrl = c.req.query("companyLogoUrl") || profile?.companyLogoUrl || undefined;
@@ -116,7 +120,7 @@ export const getScanPdf = async (c: Context) => {
       pdf = cached;
     } else {
       const { generatePdfReport } = await import("../../lib/pdfGenerator.js");
-      pdf = await generatePdfReport(scan, branding, { includeAiReport, supportUrl: supportUrl() });
+      pdf = await generatePdfReport(scan, branding, { includeAiReport, supportUrl: branded ? null : supportUrl() });
       if (!branded) await saveCachedPdfRepo(scan.id, variant, pdf).catch((err) => logError("PDF_CACHE", err));
     }
 

@@ -8,6 +8,7 @@ import {
 } from "./admin.service.js";
 import { clearCachedPdfsRepo, getScanRepo, updateScanRepo } from "../scan/scan.repository.js";
 import { generateAndStoreReport } from "../scan/scan.service.js";
+import { aiReportsEnabled } from "../../lib/features.js";
 
 export const getAdminAnalytics = async (c: Context) => {
   try {
@@ -56,6 +57,9 @@ export const getAdminRevenue = async (c: Context) => {
 };
 
 export const regenerateScanReport = async (c: Context) => {
+  if (!aiReportsEnabled()) {
+    return c.json({ success: false, code: "FEATURE_DISABLED", message: "AI reports are turned off (AI_REPORTS_ENABLED)." }, 410);
+  }
   try {
     const scan = await getScanRepo(Number(c.req.param("id")));
     if (!scan) return c.json({ success: false, message: "Scan not found" }, 404);

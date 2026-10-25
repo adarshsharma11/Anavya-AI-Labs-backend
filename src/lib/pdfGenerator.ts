@@ -117,7 +117,8 @@ const buildLegacyHtml = (scan: any, branding: PdfBranding) => {
 
 export type PdfOptions = {
   includeAiReport: boolean;
-  supportUrl: string;
+  /** null hides the support note (white-label reports). */
+  supportUrl: string | null;
 };
 
 export const buildReportHtml = (scan: any, branding: PdfBranding, options: PdfOptions) => {

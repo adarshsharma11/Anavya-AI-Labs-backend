@@ -27,8 +27,8 @@ export const listMonitorsService = async (userId: number) => {
 };
 
 export const addMonitorService = async (userId: number, rawUrl: unknown) => {
-  const { isPro } = await getUserPlanLimits(userId);
-  if (!isPro) throw new MonitorError("Weekly monitoring is a Pro feature. Upgrade to add monitors.", 402);
+  const { monitoring } = await getUserPlanLimits(userId);
+  if (!monitoring) throw new MonitorError("Weekly monitoring is included in the Pro plan. Upgrade to add monitors.", 402);
 
   const url = await assertPublicUrl(rawUrl);
   const existing = await listMonitorsService(userId);
@@ -78,10 +78,10 @@ export const getMonitorHistoryService = async (userId: number, id: number) => {
 };
 
 export const checkMonitor = async (monitor: Monitor) => {
-  const { isPro } = await getUserPlanLimits(monitor.userId);
-  if (!isPro) {
+  const { monitoring } = await getUserPlanLimits(monitor.userId);
+  if (!monitoring) {
     await db.update(monitors).set({ lastCheckedAt: new Date() }).where(eq(monitors.id, monitor.id));
-    return { id: monitor.id, skipped: "not_pro" as const };
+    return { id: monitor.id, skipped: "plan_excludes_monitoring" as const };
   }
 
   const scan = await createScanService({

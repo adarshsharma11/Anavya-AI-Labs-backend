@@ -17,6 +17,7 @@ import { compareAudits } from "../audit/compare.js";
 import type { AuditReport } from "../audit/types.js";
 
 import { logError } from "../../lib/errorLog.js";
+import { aiReportsEnabled } from "../../lib/features.js";
 
 export type ScanViewer = { id?: number; role?: string } | null | undefined;
 
@@ -147,6 +148,7 @@ export const resolveReportEmail = async (scan: ScanRow) => {
 const aiInput = (preview: unknown) => (isV2(preview) ? summarizeAuditForAi(preview) : preview);
 
 export const generateAndStoreReport = async (scanId: number, options: { notify?: boolean } = {}) => {
+  if (!aiReportsEnabled()) return;
   const current = await getScanRepo(scanId);
   if (!current?.preview || !isAuditComplete(current.preview)) return;
 
@@ -220,7 +222,7 @@ export const getScanService = async (ref: string, viewer: ScanViewer) => {
     fullReport: unlocked ? scan.fullReport : null,
     isUnlocked: Boolean(scan.isUnlocked),
     locked: !unlocked,
-    processing: unlocked && !scan.fullReport,
+    processing: unlocked && !scan.fullReport && aiReportsEnabled(),
     createdAt: scan.createdAt,
   };
 };

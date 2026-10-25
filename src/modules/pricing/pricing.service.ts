@@ -1,23 +1,30 @@
 import { findActivePlans, findPlanById } from "./pricing.repository.js";
+import { priceForRegion } from "../../lib/paymentConfig.js";
+import { getUsdToInrRate } from "../../lib/fx.js";
 
-const transformPrice = (plan: any) => {
+type PlanRow = Awaited<ReturnType<typeof findPlanById>> & {};
+
+const transformPrice = (plan: PlanRow, usdToInrRate: number) => {
+  const usd = plan.price / 100;
   return {
     ...plan,
-    price: plan.price / 100,
-    compareAtPrice: plan.compareAtPrice
-      ? plan.compareAtPrice / 100
-      : null,
+    price: usd,
+    compareAtPrice: plan.compareAtPrice ? plan.compareAtPrice / 100 : null,
     hasDiscount: !!plan.discountPercent,
+    prices: {
+      USD: priceForRegion(usd, "INTL", usdToInrRate),
+      INR: priceForRegion(usd, "IN", usdToInrRate),
+    },
   };
 };
 
 export const getPublicPlansService = async () => {
-  const data = await findActivePlans();
-  return data.map(transformPrice);
+  const [data, rate] = await Promise.all([findActivePlans(), getUsdToInrRate()]);
+  return data.map((plan) => transformPrice(plan, rate));
 };
 
 export const getSinglePlanService = async (id: number) => {
   const plan = await findPlanById(id);
-  if (!plan) throw new Error("Plan not found");
-  return transformPrice(plan);
+  if (!plan || !plan.active) throw new Error("Plan not found");
+  return transformPrice(plan, await getUsdToInrRate());
 };

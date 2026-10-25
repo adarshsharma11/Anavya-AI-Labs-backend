@@ -52,7 +52,7 @@ export function buildAuditHtml(
   report: AuditReport,
   aiReport: Record<string, unknown> | null,
   branding: PdfBranding,
-  supportUrl: string,
+  supportUrl: string | null,
 ) {
   const brand = branding.companyName || 'Anavya AI Labs';
   const logo = safeLogoUrl(branding.companyLogoUrl);
@@ -212,9 +212,9 @@ export function buildAuditHtml(
 
   ${aiSection}
 
-  <div class="support">
+  ${supportUrl ? `<div class="support">
     <strong>This report is free.</strong> If it helped you, support the project so we can keep it free for everyone: ${escapeHtml(supportUrl)}
-  </div>
+  </div>` : ''}
   <div class="footer">Report by ${escapeHtml(brand)} · Generated ${escapeHtml(formatDate(report.generatedAt))} · Re-run any time for a fresh report.</div>
 </body>
 </html>`;

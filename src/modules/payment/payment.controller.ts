@@ -14,10 +14,15 @@ import { normalizeEmail } from "../../lib/request.js";
 
 import { logError } from "../../lib/errorLog.js";
 import { env } from "../../config/env.js";
-import {
-  getPaymentQuote,
-  type PaymentRegion,
-} from "../../lib/paymentConfig.js";
+import { getPaymentQuote, quoteUsd, resolveRegion } from "../../lib/paymentConfig.js";
+import { aiReportsEnabled } from "../../lib/features.js";
+import { getActivePlanBySlug } from "../subscription/subscription.service.js";
+
+const reportsDisabled = (c: Context) =>
+  c.json(
+    { success: false, code: "FEATURE_DISABLED", message: "One-time AI reports are not available right now. See our plans instead." },
+    410,
+  );
 
 const WEBHOOK_SECRET_PLACEHOLDERS = new Set([
   "",
@@ -33,21 +38,6 @@ function secureCompare(expected: string, actual: string): boolean {
     Buffer.from(expected, "utf8"),
     Buffer.from(actual, "utf8"),
   );
-}
-
-function resolveRegion(
-  value: unknown,
-  c: Context,
-): PaymentRegion {
-  if (value === "IN" || value === "INTL") return value;
-
-  const header = c.req.header("x-client-region");
-  if (header === "IN" || header === "INTL") return header;
-
-  const cfCountry = c.req.header("cf-ipcountry");
-  if (cfCountry === "IN") return "IN";
-
-  return "INTL";
 }
 
 const unlockScan = async (scan: ScanRow) => {
@@ -87,6 +77,13 @@ const fulfillReportPayment = async (scan: ScanRow, payment: Parameters<typeof re
 export const getQuote = async (c: Context) => {
   try {
     const region = resolveRegion(c.req.query("region"), c);
+    const slug = c.req.query("plan");
+    if (slug) {
+      const plan = await getActivePlanBySlug(slug);
+      if (!plan) return c.json({ success: false, message: "Plan not found" }, 404);
+      return c.json({ success: true, data: { plan: plan.slug, ...(await quoteUsd(plan.price / 100, region)) } });
+    }
+    if (!aiReportsEnabled()) return reportsDisabled(c);
     const quote = await getPaymentQuote(region);
     return c.json({ success: true, data: quote });
   } catch (e: any) {
@@ -95,6 +92,7 @@ export const getQuote = async (c: Context) => {
 };
 
 export const createOrder = async (c: Context) => {
+  if (!aiReportsEnabled()) return reportsDisabled(c);
   try {
     const body = await c.req.json();
     const { scanId, region: bodyRegion } = body;
@@ -177,6 +175,7 @@ export const createOrder = async (c: Context) => {
 };
 
 export const verifyPayment = async (c: Context) => {
+  if (!aiReportsEnabled()) return reportsDisabled(c);
   try {
     const body = await c.req.json();
 

@@ -1,31 +1,69 @@
+import type { Context } from "hono";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "../db/db.js";
 import { plans } from "../db/schema/plan.js";
-import { getSettingByKeyRepo } from "../modules/settings/settings.repository.js";
+import { getUsdToInrRate } from "./fx.js";
 import { logError } from "./errorLog.js";
 
 export type PaymentRegion = "IN" | "INTL";
 
-/** Fallback when no active one_time plan exists: $2.99 USD with 18% GST included. */
+/** Fallback when no active one_time plan exists. */
 export const PAYMENT_BASE_USD = Number(process.env.PAYMENT_BASE_USD || "2.99");
 export const GST_RATE_PERCENT = 18;
-export const DEFAULT_USD_TO_INR_RATE = 80.84;
-export const USD_TO_INR_SETTING_KEY = "usd_to_inr_rate";
 
 export type PaymentQuote = {
   region: PaymentRegion;
   currency: "INR" | "USD";
+  /** Price before tax, in major units. */
+  base: number;
+  gstAmount: number;
+  gstRatePercent: number;
   total: number;
   amountSubunits: number;
-  gstInclusive: true;
-  gstRatePercent: number;
   usdToInrRate?: number;
 };
 
-const positiveNumber = (value: unknown) => {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : null;
-};
+/** India pays INR at the live rate plus 18% GST, rounded to whole rupees; everyone else pays the USD list price. */
+export function priceForRegion(usd: number, region: PaymentRegion, usdToInrRate: number): PaymentQuote {
+  if (region === "INTL") {
+    return {
+      region,
+      currency: "USD",
+      base: usd,
+      gstAmount: 0,
+      gstRatePercent: 0,
+      total: usd,
+      amountSubunits: Math.round(usd * 100),
+    };
+  }
+  const base = Math.round(usd * usdToInrRate);
+  const gstAmount = Math.round((base * GST_RATE_PERCENT) / 100);
+  const total = base + gstAmount;
+  return {
+    region,
+    currency: "INR",
+    base,
+    gstAmount,
+    gstRatePercent: GST_RATE_PERCENT,
+    total,
+    amountSubunits: total * 100,
+    usdToInrRate: Math.round(usdToInrRate * 100) / 100,
+  };
+}
+
+export async function quoteUsd(usd: number, region: PaymentRegion): Promise<PaymentQuote> {
+  return priceForRegion(usd, region, region === "IN" ? await getUsdToInrRate() : 0);
+}
+
+export function resolveRegion(value: unknown, c: Context): PaymentRegion {
+  if (value === "IN" || value === "INTL") return value;
+
+  const header = c.req.header("x-client-region");
+  if (header === "IN" || header === "INTL") return header;
+
+  const country = c.req.header("x-vercel-ip-country") ?? c.req.header("cf-ipcountry");
+  return country === "IN" ? "IN" : "INTL";
+}
 
 export async function getReportBaseUsd() {
   try {
@@ -35,50 +73,14 @@ export async function getReportBaseUsd() {
       .where(and(eq(plans.type, "one_time"), eq(plans.active, true)))
       .orderBy(asc(plans.price))
       .limit(1);
-    const cents = positiveNumber(res[0]?.price);
-    if (cents) return cents / 100;
+    const cents = Number(res[0]?.price);
+    if (Number.isFinite(cents) && cents > 0) return cents / 100;
   } catch (err) {
     logError("QUOTE_PLAN_PRICE", err);
   }
   return PAYMENT_BASE_USD;
 }
 
-export async function getUsdToInrRate() {
-  try {
-    const setting = await getSettingByKeyRepo(USD_TO_INR_SETTING_KEY);
-    const fromSetting = positiveNumber(setting?.value);
-    if (fromSetting) return fromSetting;
-  } catch (err) {
-    logError("QUOTE_INR_RATE", err);
-  }
-  return positiveNumber(process.env.USD_TO_INR_RATE) ?? DEFAULT_USD_TO_INR_RATE;
-}
-
 export async function getPaymentQuote(region: PaymentRegion): Promise<PaymentQuote> {
-  const baseUsd = await getReportBaseUsd();
-
-  if (region === "INTL") {
-    return {
-      region,
-      currency: "USD",
-      total: baseUsd,
-      amountSubunits: Math.round(baseUsd * 100),
-      gstInclusive: true,
-      gstRatePercent: GST_RATE_PERCENT,
-    };
-  }
-
-  const rate = await getUsdToInrRate();
-  const totalInr =
-    Math.round(baseUsd * rate * (1 + GST_RATE_PERCENT / 100) * 100) / 100;
-
-  return {
-    region,
-    currency: "INR",
-    total: totalInr,
-    amountSubunits: Math.round(totalInr * 100),
-    gstInclusive: true,
-    gstRatePercent: GST_RATE_PERCENT,
-    usdToInrRate: rate,
-  };
+  return quoteUsd(await getReportBaseUsd(), region);
 }

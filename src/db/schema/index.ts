@@ -16,4 +16,5 @@ export * from "./geoChecks.js";
 export * from "./monitors.js";
 export * from "./reportPdfs.js";
 export * from "./reviews.js";
+export * from "./razorpayPlans.js";
 
