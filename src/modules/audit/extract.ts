@@ -34,6 +34,9 @@ export interface PageData {
   readonly faqPairs: number;
   readonly images: number;
   readonly imagesWithAlt: number;
+  readonly lazyImages: number;
+  readonly renderBlockingScripts: number;
+  readonly stylesheets: number;
   readonly internalLinks: readonly string[];
   readonly externalHosts: readonly string[];
   readonly hasAboutOrContactLink: boolean;
@@ -156,6 +159,12 @@ export function extractPage(url: string, html: string): PageData {
   const images = $("img");
   const imageCount = images.length;
   const imagesWithAlt = images.filter((_, el) => $(el).attr("alt") !== undefined).length;
+  const lazyImages = images.filter((_, el) => $(el).attr("loading") === "lazy").length;
+  const renderBlockingScripts = $("head script[src]").filter((_, el) => {
+    const s = $(el);
+    return s.attr("async") === undefined && s.attr("defer") === undefined && s.attr("type") !== "module";
+  }).length;
+  const stylesheets = $('link[rel="stylesheet"]').length;
   const ogType = meta('meta[property="og:type"]');
   const head = {
     lang: clean($("html").attr("lang") ?? ""),
@@ -222,6 +231,9 @@ export function extractPage(url: string, html: string): PageData {
     faqPairs,
     images: imageCount,
     imagesWithAlt,
+    lazyImages,
+    renderBlockingScripts,
+    stylesheets,
     internalLinks: [...internalLinks],
     externalHosts: [...externalHosts],
     hasAboutOrContactLink,

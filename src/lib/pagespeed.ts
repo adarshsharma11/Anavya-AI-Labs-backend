@@ -72,8 +72,13 @@ export async function fetchPageSpeed(url: string): Promise<PageSpeedResult | nul
           }
         : null,
     };
-  } catch (err) {
-    logError("PAGESPEED", err, { url });
+  } catch (err: any) {
+    const status = err?.response?.status;
+    const hint =
+      status === 429 && !process.env.PAGESPEED_API_KEY
+        ? "Set PAGESPEED_API_KEY: Google rejects anonymous PageSpeed requests from shared server IPs"
+        : undefined;
+    logError("PAGESPEED", err, { url, status, hint });
     return null;
   }
 }

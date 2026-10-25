@@ -92,18 +92,17 @@ export const createScanService = async (input: CreateScanInput) => {
   });
 
   const competitorAudit = competitorUrl
-    ? startSiteAudit(competitorUrl, { multiPage: false, speed: false })
-        .then((run) => run.initial)
-        .catch((err) => {
-          logError("COMPETITOR_SCAN", err, { competitorUrl });
-          return null;
-        })
+    ? startSiteAudit(competitorUrl, { multiPage: true, speed: false }).catch((err) => {
+        logError("COMPETITOR_SCAN", err, { competitorUrl });
+        return null;
+      })
     : Promise.resolve(null);
 
   const run = await startSiteAudit(url, { multiPage: true, speed: true }, async (report) => {
     await updateScanRepo(await rowReady, { preview: report });
   });
-  const competitorPreview = await competitorAudit;
+  const competitorRun = await competitorAudit;
+  const competitorPreview = competitorRun?.initial ?? null;
 
   const scan = await createScanRepo({
     ...baseRow,
@@ -118,8 +117,13 @@ export const createScanService = async (input: CreateScanInput) => {
   }
   resolveRow(scan.id);
 
-  const finish = run.completion.then(async (final) => {
-    await updateScanRepo(scan.id, { preview: final });
+  const finish = Promise.all([run.completion, competitorRun?.completion ?? null]).then(async ([final, competitorFinal]) => {
+    await updateScanRepo(scan.id, {
+      preview: final,
+      ...(competitorFinal
+        ? { competitorPreview: competitorFinal, competitorAnalysis: compareAudits(final, competitorFinal) }
+        : {}),
+    });
     await finishScan(scan.id, notify);
     return final;
   });
@@ -191,7 +195,7 @@ export const findAccessibleScan = async (ref: string, viewer: ScanViewer) => {
 export const getScanService = async (ref: string, viewer: ScanViewer) => {
   const { scan, fullAccess } = await findAccessibleScan(ref, viewer);
   const unlocked = Boolean(scan.isUnlocked) && fullAccess;
-  const auditComplete = isAuditComplete(scan.preview);
+  const auditComplete = isAuditComplete(scan.preview) && scan.status !== "processing";
 
   if (scan.isUnlocked && !scan.fullReport && auditComplete) {
     runInBackground("REPORT_RETRY", generateAndStoreReport(scan.id));
@@ -208,6 +212,11 @@ export const getScanService = async (ref: string, viewer: ScanViewer) => {
     preview: unlocked ? scan.preview : lockLegacyPreview(scan.preview),
     competitorPreview: scan.competitorPreview,
     competitorAnalysis: scan.competitorAnalysis,
+    competitorStatus: !scan.competitorUrl
+      ? null
+      : scan.competitorPreview
+        ? auditComplete ? "done" : "running"
+        : "failed",
     fullReport: unlocked ? scan.fullReport : null,
     isUnlocked: Boolean(scan.isUnlocked),
     locked: !unlocked,

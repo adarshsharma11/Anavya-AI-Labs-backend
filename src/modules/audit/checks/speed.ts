@@ -1,6 +1,49 @@
 import type { PageSpeedResult } from "../../../lib/pagespeed.js";
+import type { PageData } from "../extract.js";
 import type { CheckResult } from "../types.js";
-import { scored } from "./define.js";
+import { notApplicable, scored } from "./define.js";
+
+/** Estimates speed from our own fetch when Google PageSpeed is unavailable. */
+export function runBasicSpeedChecks(page: PageData, responseMs: number): CheckResult[] {
+  const blocking = page.renderBlockingScripts + Math.max(0, page.stylesheets - 1);
+  const lazyCandidates = Math.max(0, page.images - 2);
+  const lazyDef = {
+    id: "lazy_images",
+    category: "speed",
+    label: "Lazy-Loaded Images",
+    maxPoints: 15,
+    why: "Images below the fold that load immediately compete with the main content for bandwidth.",
+  } as const;
+
+  return [
+    scored(
+      { id: "response_time", category: "speed", label: "Server Response Time", maxPoints: 40, why: "A slow server delays everything else on the page, for visitors and AI crawlers alike." },
+      responseMs <= 600 ? 40 : responseMs <= 1500 ? 25 : responseMs <= 3000 ? 10 : 0,
+      `Page HTML delivered in ${(responseMs / 1000).toFixed(1)} s (basic check: connect your PageSpeed API key for Core Web Vitals)`,
+      "Enable caching or a CDN for HTML, upgrade slow hosting, and reduce server-side work before the first byte.",
+    ),
+    scored(
+      { id: "html_weight", category: "speed", label: "HTML Weight", maxPoints: 20, why: "Heavy HTML takes longer to download and parse, especially on mobile." },
+      page.sizeKB <= 100 ? 20 : page.sizeKB <= 250 ? 10 : 0,
+      `HTML size: ${page.sizeKB} KB`,
+      "Remove inlined data blobs and unused markup, and paginate very long lists.",
+    ),
+    scored(
+      { id: "render_blocking", category: "speed", label: "Render-Blocking Resources", maxPoints: 25, why: "Scripts and stylesheets in the head stop the browser from showing anything until they load." },
+      blocking <= 1 ? 25 : blocking <= 4 ? 12 : 0,
+      `${page.renderBlockingScripts} blocking scripts and ${page.stylesheets} stylesheets in the page head`,
+      "Add defer or async to scripts, inline critical CSS, and combine or remove extra stylesheets.",
+    ),
+    lazyCandidates === 0
+      ? notApplicable(lazyDef, "the page has only a few images")
+      : scored(
+          lazyDef,
+          page.lazyImages >= lazyCandidates / 2 ? 15 : page.lazyImages > 0 ? 7 : 0,
+          `${page.lazyImages} of ${page.images} images use loading="lazy"`,
+          'Add loading="lazy" to images below the fold (keep the hero image eager).',
+        ),
+  ];
+}
 
 export function runSpeedChecks(speed: PageSpeedResult): CheckResult[] {
   const score = speed.performanceScore;

@@ -7,7 +7,7 @@ import { parseRobots } from "./robots.js";
 import { loadSitemapUrls, selectKeyPages } from "./discover.js";
 import { runSiteChecks, type SiteData } from "./checks/site.js";
 import { runPageChecks } from "./checks/page.js";
-import { runSpeedChecks } from "./checks/speed.js";
+import { runBasicSpeedChecks, runSpeedChecks } from "./checks/speed.js";
 import {
   buildRecommendations,
   buildSummary,
@@ -35,6 +35,7 @@ export interface AuditRun {
 interface PageState {
   readonly data: PageData;
   speed: PageSpeedResult | null;
+  readonly responseMs: number | null;
 }
 
 const PAGE_FETCH_CONCURRENCY = 3;
@@ -52,8 +53,14 @@ const mapLimit = async <T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return results;
 };
 
+const speedChecksFor = (state: PageState) => {
+  if (state.speed) return runSpeedChecks(state.speed);
+  if (state.responseMs !== null) return runBasicSpeedChecks(state.data, state.responseMs);
+  return [];
+};
+
 const buildPageAudit = (state: PageState, siteChecks: readonly CheckResult[]): PageAudit => {
-  const checks = [...runPageChecks(state.data), ...(state.speed ? runSpeedChecks(state.speed) : [])];
+  const checks = [...runPageChecks(state.data), ...speedChecksFor(state)];
   const categories = scoreCategories([...siteChecks, ...checks]);
   return {
     url: state.data.url,
@@ -99,6 +106,7 @@ const assemble = (
     generatedAt: new Date().toISOString(),
     complete: progress.pages !== "running" && progress.speed !== "running",
     progress,
+    speedSource: states.some((s) => s.speed) ? "pagespeed" : states.some((s) => s.responseMs !== null) ? "basic" : null,
     overall,
     verdict: verdictFor(overall),
     summary: buildSummary({
@@ -171,7 +179,11 @@ export async function startSiteAudit(
   };
   const siteChecks = runSiteChecks(site);
 
-  const home: PageState = { data: extractPage(pageRes.finalUrl, pageRes.body), speed: null };
+  const home: PageState = {
+    data: extractPage(pageRes.finalUrl, pageRes.body),
+    speed: null,
+    responseMs: options.speed ? pageRes.elapsedMs : null,
+  };
   const states: PageState[] = [home];
   const progress: { pages: StageStatus; speed: StageStatus } = {
     pages: options.multiPage ? "running" : "done",
@@ -192,7 +204,7 @@ export async function startSiteAudit(
     const candidates = sitemap.urls.length ? sitemap.urls : home.data.internalLinks;
     const extraUrls = selectKeyPages(home.data.url, candidates);
     const loaded = await mapLimit(extraUrls, PAGE_FETCH_CONCURRENCY, loadPage);
-    const extra = loaded.filter((p): p is PageData => p !== null).map((data) => ({ data, speed: null }));
+    const extra = loaded.filter((p): p is PageData => p !== null).map((data) => ({ data, speed: null, responseMs: null }));
     states.push(...extra);
     progress.pages = "done";
     await emit();
@@ -209,7 +221,7 @@ export async function startSiteAudit(
     ]);
     home.speed = homeResult;
     if (second) second.speed = secondResult;
-    progress.speed = homeResult || secondResult ? "done" : "unavailable";
+    progress.speed = "done";
     await emit();
   };
 
@@ -223,7 +235,7 @@ export async function startSiteAudit(
       pagesPromise,
       runSpeed(pagesPromise).catch((err) => {
         logError("AUDIT_SPEED", err, { url });
-        progress.speed = "unavailable";
+        progress.speed = "done";
       }),
     ]);
     await saveChain;

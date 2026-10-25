@@ -21,7 +21,11 @@ export const createScan = async (c: Context) => {
     const user = c.get("user") as { id: number; email: string } | undefined;
 
     const url = await assertPublicUrl(body.url);
-    const competitorUrl = body.competitorUrl ? await assertPublicUrl(body.competitorUrl) : null;
+    const competitorUrl = body.competitorUrl
+      ? await assertPublicUrl(body.competitorUrl).catch((err) => {
+          throw err instanceof UnsafeUrlError ? new UnsafeUrlError(`Competitor URL: ${err.message}`) : err;
+        })
+      : null;
 
     if (!(await checkRateLimit(`scan:${ip}`))) {
       return c.json({ success: false, message: "Too many requests. Please wait a minute." }, 429);

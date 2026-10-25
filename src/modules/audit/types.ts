@@ -81,6 +81,7 @@ export interface AuditReport {
   readonly generatedAt: string;
   readonly complete: boolean;
   readonly progress: { readonly pages: StageStatus; readonly speed: StageStatus };
+  readonly speedSource: "pagespeed" | "basic" | null;
   readonly overall: number;
   readonly verdict: string;
   readonly summary: string;

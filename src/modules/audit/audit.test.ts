@@ -4,7 +4,7 @@ import { parseRobots, isCrawlerAllowed } from "./robots.js";
 import { selectKeyPages, extractSitemapLocs } from "./discover.js";
 import { runPageChecks } from "./checks/page.js";
 import { runSiteChecks, type SiteData } from "./checks/site.js";
-import { runSpeedChecks } from "./checks/speed.js";
+import { runBasicSpeedChecks, runSpeedChecks } from "./checks/speed.js";
 import { buildRecommendations, overallScore, scoreCategories } from "./score.js";
 import { isRealTextFile, type FetchedResource } from "./fetch.js";
 import type { PageAudit } from "./types.js";
@@ -112,6 +112,27 @@ describe("page checks", () => {
     expect(totals).toEqual({ aeo: 100, geo: 100, crawlers: 100, technical: 100, content: 100, speed: 100 });
     expect(speed.find((c) => c.id === "lcp")?.points).toBe(0);
     expect(speed.find((c) => c.id === "performance_score")?.points).toBe(40);
+  });
+});
+
+describe("basic speed checks", () => {
+  const heavy = `<html><head><script src="a.js"></script><script src="b.js"></script><script src="c.js" defer></script>
+    <link rel="stylesheet" href="1.css"><link rel="stylesheet" href="2.css"></head>
+    <body>${Array.from({ length: 6 }, (_, i) => `<img src="${i}.png"${i > 3 ? ' loading="lazy"' : ""}>`).join("")}</body></html>`;
+
+  test("score server response, weight, blocking resources and lazy images out of 100", () => {
+    const checks = runBasicSpeedChecks(extractPage("https://example.com/", heavy), 900);
+    expect(checks.reduce((sum, c) => sum + c.maxPoints, 0)).toBe(100);
+    expect(checks.find((c) => c.id === "response_time")?.points).toBe(25);
+    expect(checks.find((c) => c.id === "render_blocking")?.evidence).toContain("2 blocking scripts and 2 stylesheets");
+    expect(checks.find((c) => c.id === "render_blocking")?.points).toBe(12);
+    expect(checks.find((c) => c.id === "lazy_images")?.points).toBe(15);
+  });
+
+  test("skips the lazy-image check on pages with few images", () => {
+    const checks = runBasicSpeedChecks(extractPage("https://example.com/", THIN_HOME), 300);
+    expect(checks.find((c) => c.id === "lazy_images")?.status).toBe("na");
+    expect(scoreCategories(checks).speed).toBe(100);
   });
 });
 
