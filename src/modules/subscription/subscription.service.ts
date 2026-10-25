@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { and, desc, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, gt, ilike, inArray, isNull, ne, or } from "drizzle-orm";
 import { db } from "../../db/db.js";
 import { plans } from "../../db/schema/plan.js";
 import { subscriptions } from "../../db/schema/subscription.js";
@@ -41,6 +41,27 @@ export const getActivePlanBySlug = async (slug: string) => {
     .select()
     .from(plans)
     .where(and(eq(plans.slug, slug), eq(plans.active, true)))
+    .limit(1);
+  return plan ?? null;
+};
+
+/** Accepts a plan slug ("pro"), name ("Pro") or id (2 / "2"). */
+export const findSubscriptionPlan = async (ref: unknown) => {
+  if (typeof ref !== "string" && typeof ref !== "number") return null;
+  const value = String(ref).trim();
+  if (!value) return null;
+
+  const id = /^\d+$/.test(value) ? Number(value) : null;
+  const [plan] = await db
+    .select()
+    .from(plans)
+    .where(
+      and(
+        eq(plans.active, true),
+        eq(plans.type, "subscription"),
+        id !== null ? eq(plans.id, id) : or(eq(plans.slug, value.toLowerCase()), ilike(plans.name, value)),
+      ),
+    )
     .limit(1);
   return plan ?? null;
 };
@@ -163,10 +184,10 @@ const ensureRazorpayPlan = async (plan: Plan, quote: PaymentQuote): Promise<{ ra
   }
 };
 
-export const createSubscriptionService = async (userId: number, slug: unknown, region: PaymentRegion) => {
-  const plan = typeof slug === "string" ? await getActivePlanBySlug(slug) : null;
-  if (!plan || plan.type !== "subscription") {
-    throw new SubscriptionError("Choose a valid plan (starter or pro).", "INVALID_PLAN");
+export const createSubscriptionService = async (userId: number, planRef: unknown, region: PaymentRegion) => {
+  const plan = await findSubscriptionPlan(planRef);
+  if (!plan) {
+    throw new SubscriptionError('Choose a valid plan: send { "plan": "starter" } or { "plan": "pro" }.', "INVALID_PLAN");
   }
 
   const current = await getActiveSubscription(userId);

@@ -101,6 +101,11 @@ const statements = [
     AND NOT EXISTS (SELECT 1 FROM plans WHERE slug = 'free')`,
   `UPDATE plans SET active = false WHERE slug IS NULL AND type IN ('one_time', 'subscription')`,
   `INSERT INTO plans (slug, name, description, price, cadence, type, features, cta, scan_limit, badge, is_highlighted, white_label, monitoring, active)
+  VALUES ('free', 'Free', 'Full AI and search readiness audits for anyone getting started.', 0, 'forever', 'free',
+    '["5 scans per day","Full AEO, GEO, technical & content audit","Homepage + up to 5 key pages","Competitor comparison","Downloadable PDF report"]'::json,
+    'Start Free', 5, NULL, false, false, false, true)
+  ON CONFLICT (slug) DO NOTHING`,
+  `INSERT INTO plans (slug, name, description, price, cadence, type, features, cta, scan_limit, badge, is_highlighted, white_label, monitoring, active)
   VALUES
     ('starter', 'Starter', 'More daily audits for freelancers and small sites.', 900, 'per month', 'subscription',
       '["15 scans per day","Everything in Free","Priority audit queue","Email support"]'::json,

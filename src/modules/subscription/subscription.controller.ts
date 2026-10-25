@@ -20,7 +20,8 @@ const fail = (c: Context, context: string, e: any) => {
 export const createSubscription = async (c: Context) => {
   try {
     const body = await c.req.json().catch(() => ({}));
-    const data = await createSubscriptionService(currentUserId(c), body.plan, resolveRegion(body.region, c));
+    const planRef = body.plan ?? body.slug ?? body.planSlug ?? body.planId ?? body.plan_id ?? c.req.query("plan");
+    const data = await createSubscriptionService(currentUserId(c), planRef, resolveRegion(body.region, c));
     return c.json({ success: true, data });
   } catch (e) {
     return fail(c, "SUBSCRIPTION_CREATE", e);
