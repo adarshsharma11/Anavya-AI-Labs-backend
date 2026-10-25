@@ -15,6 +15,7 @@ import portfolioRoute from './api/v1/public/portfolio.route.js'
 import aboutRoute from './api/v1/public/about.route.js'
 import adminRoute from './api/v1/admin.route.js'
 import geoRoute from './api/v1/public/geo.route.js'
+import reviewsRoute from './api/v1/public/reviews.route.js'
 import cronRoute from './api/cron.route.js'
 
 
@@ -35,7 +36,7 @@ app.use(
       }
       return env.FRONTEND_URL;
     },
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-client-region'],
   })
 )
@@ -84,6 +85,7 @@ app.route(apiPrefix, contactRoute)
 app.route(apiPrefix, portfolioRoute)
 app.route(apiPrefix, aboutRoute)
 app.route(apiPrefix, adminRoute)
+app.route(apiPrefix, reviewsRoute)
 app.route('/api/cron', cronRoute)
 
 

@@ -73,6 +73,20 @@ const statements = [
   )`,
   `ALTER TABLE payments ADD COLUMN IF NOT EXISTS email text`,
   `CREATE INDEX IF NOT EXISTS scans_normalized_url_created_idx ON scans (normalized_url, created_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS reviews (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    role_company text,
+    email text,
+    review text NOT NULL,
+    status text NOT NULL DEFAULT 'pending',
+    user_id integer,
+    user_ip text,
+    created_at timestamp DEFAULT now(),
+    reviewed_at timestamp
+  )`,
+  `CREATE INDEX IF NOT EXISTS reviews_status_created_idx ON reviews (status, created_at DESC)`,
 ];
 
 for (const statement of statements) {
