@@ -43,6 +43,55 @@ export function resolveLlmsTxtUrl(input: string): string {
   return trimmed;
 }
 
+async function checkRootDiscovery(
+  finalUrl: string,
+  httpStatus: number
+): Promise<{
+  llmsTxt: { found: boolean; status: number | null; url: string };
+  llmsFullTxt: { found: boolean; status: number | null; url: string };
+}> {
+  let fullUrl = '';
+  try {
+    const parsed = new URL(finalUrl);
+    parsed.pathname = parsed.pathname.replace(/\/llms\.txt$/i, '') + '/llms-full.txt';
+    fullUrl = parsed.toString();
+  } catch {
+    fullUrl = finalUrl.replace(/\/llms\.txt$/i, '') + '/llms-full.txt';
+  }
+
+  let fullFound = false;
+  let fullStatus: number | null = null;
+  try {
+    const safeFullUrl = await assertPublicUrl(fullUrl);
+    const res = await axios.get(safeFullUrl, {
+      ...safeRedirects,
+      timeout: 3000,
+      headers: HEADERS,
+      responseType: 'text',
+      maxContentLength: 50 * 1024,
+      validateStatus: () => true,
+    });
+    fullStatus = res.status;
+    fullFound = res.status >= 200 && res.status < 300;
+  } catch {
+    fullFound = false;
+    fullStatus = 404;
+  }
+
+  return {
+    llmsTxt: {
+      found: httpStatus >= 200 && httpStatus < 300,
+      status: httpStatus,
+      url: finalUrl,
+    },
+    llmsFullTxt: {
+      found: fullFound,
+      status: fullStatus,
+      url: fullUrl,
+    },
+  };
+}
+
 /**
  * Fetches a published llms.txt URL securely and performs specification validation
  * and link availability checks.
@@ -98,6 +147,8 @@ export async function checkPublishedUrl(targetUrl: string): Promise<UrlCheckResu
         ? `No llms.txt file found at ${validatedUrl} (HTTP 404 Not Found).`
         : `Remote server responded with HTTP ${httpStatus} (${response.statusText || 'Error'}). File could not be retrieved.`;
 
+    const discovery = await checkRootDiscovery(finalUrl, httpStatus);
+
     return {
       requestedUrl: targetUrl,
       finalUrl,
@@ -140,6 +191,7 @@ export async function checkPublishedUrl(targetUrl: string): Promise<UrlCheckResu
         },
         links: [],
       },
+      discovery,
     };
   }
 
@@ -181,11 +233,14 @@ export async function checkPublishedUrl(targetUrl: string): Promise<UrlCheckResu
   }
 
   // Step 6: Run Reusable Link-Checking Service on extracted links
-  const linkChecks = await checkLinks(validation.links, {
-    timeoutMs: 5000,
-    concurrency: 5,
-    maxLinks: 30,
-  });
+  const [linkChecks, discovery] = await Promise.all([
+    checkLinks(validation.links, {
+      timeoutMs: 5000,
+      concurrency: 5,
+      maxLinks: 30,
+    }),
+    checkRootDiscovery(finalUrl, httpStatus),
+  ]);
 
   return {
     requestedUrl: targetUrl,
@@ -195,5 +250,6 @@ export async function checkPublishedUrl(targetUrl: string): Promise<UrlCheckResu
     isMarkdown,
     validation,
     linkChecks,
+    discovery,
   };
 }

@@ -65,6 +65,17 @@ export interface LinkCheckReport {
   links: LinkCheckItem[];
 }
 
+export interface RootFileDiscoveryEntry {
+  found: boolean;
+  status: number | null;
+  url: string;
+}
+
+export interface RootFileDiscovery {
+  llmsTxt: RootFileDiscoveryEntry;
+  llmsFullTxt: RootFileDiscoveryEntry;
+}
+
 export interface UrlCheckResult {
   requestedUrl: string;
   finalUrl: string;
@@ -73,6 +84,7 @@ export interface UrlCheckResult {
   isMarkdown: boolean;
   validation: LlmsTxtValidationResult;
   linkChecks: LinkCheckReport;
+  discovery?: RootFileDiscovery;
 }
 
 export interface GeneratorResult {
