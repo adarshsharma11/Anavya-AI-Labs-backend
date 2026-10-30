@@ -17,6 +17,7 @@ import adminRoute from './api/v1/admin.route.js'
 import geoRoute from './api/v1/public/geo.route.js'
 import reviewsRoute from './api/v1/public/reviews.route.js'
 import cronRoute from './api/cron.route.js'
+import llmsTxtRoute from './api/v1/public/llmsTxt.route.js'
 
 
 import { env } from './config/env.js'
@@ -72,6 +73,8 @@ app.get('/api/test', (c) => {
 // routes
 app.route(apiPrefix, geoRoute)
 app.route('/api', geoRoute)
+app.route(apiPrefix, llmsTxtRoute)
+app.route('/api', llmsTxtRoute)
 app.route(apiPrefix, pricingRoute)
 app.route(apiPrefix, scanRoute)
 app.route(apiPrefix, servicesRoute)

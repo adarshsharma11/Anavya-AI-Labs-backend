@@ -188,10 +188,16 @@ export const findAccessibleScan = async (ref: string, viewer: ScanViewer) => {
   const scan = await findScanByRefRepo(ref);
   if (!scan) throw new ScanNotFoundError();
 
-  const fullAccess = canAccessFullReport(scan, ref, viewer);
+  
+   const fullAccess = canAccessFullReport(scan, ref, viewer);
   if (!isPublicScanId(ref) && !fullAccess) throw new ScanNotFoundError();
+  
+  // const fullAccess =
+  //   canAccessFullReport(scan, ref, viewer) ||
+  //   (process.env.NODE_ENV !== "production" && Boolean(scan.isUnlocked));
 
   return { scan, fullAccess };
+  
 };
 
 export const getScanService = async (ref: string, viewer: ScanViewer) => {
